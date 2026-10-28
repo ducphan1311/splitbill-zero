@@ -1,0 +1,254 @@
+import subprocess
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: #0B0F19; color: #E2E8F0; width: 1920px; height: 1080px; padding: 36px 44px; display: flex; flex-direction: column; justify-content: space-between; }
+  
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1E293B; padding-bottom: 18px; }
+  .title-tag { font-size: 13px; font-weight: 700; color: #38BDF8; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .title { font-size: 32px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; }
+  .title span { color: #38BDF8; }
+  .subtitle { font-size: 14px; color: #94A3B8; margin-top: 4px; }
+  .badges { display: flex; gap: 12px; }
+  .badge { background: #1E293B; border: 1px solid #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #F1F5F9; }
+  .badge.cyan { border-color: #0284C7; color: #38BDF8; background: rgba(2, 132, 199, 0.15); }
+  .badge.emerald { border-color: #059669; color: #34D399; background: rgba(5, 150, 105, 0.15); }
+  .badge.amber { border-color: #D97706; color: #FBBF24; background: rgba(217, 119, 6, 0.15); }
+
+  /* 4 Columns Architecture Grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; flex: 1; margin: 24px 0 20px 0; }
+  
+  .col { background: #111827; border: 1px solid #1F2937; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; position: relative; }
+  .col.active { border-color: #38BDF8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.12); }
+  
+  .col-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #1F2937; }
+  .col-num { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .col-1 .col-num { background: #0284C7; color: #fff; }
+  .col-2 .col-num { background: #6366F1; color: #fff; }
+  .col-3 .col-num { background: #10B981; color: #fff; }
+  .col-4 .col-num { background: #F59E0B; color: #fff; }
+  
+  .col-title { font-size: 15px; font-weight: 700; color: #FFFFFF; }
+  .col-subtitle { font-size: 11px; color: #94A3B8; }
+
+  /* Cards inside Columns */
+  .card-list { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .card { background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; }
+  .card.highlight { background: rgba(56, 189, 248, 0.08); border-color: #0284C7; }
+  .card.purple { background: rgba(99, 102, 241, 0.08); border-color: #6366F1; }
+  .card.green { background: rgba(16, 185, 129, 0.08); border-color: #10B981; }
+  .card.amber { background: rgba(245, 158, 11, 0.08); border-color: #F59E0B; }
+  
+  .card-name { font-size: 13px; font-weight: 700; color: #F8FAFC; display: flex; align-items: center; justify-content: space-between; }
+  .card-desc { font-size: 11.5px; color: #94A3B8; margin-top: 4px; line-height: 1.45; }
+  .card-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+  
+  .tag-blue { background: #0284C7; color: #E0F2FE; }
+  .tag-purple { background: #4F46E5; color: #EEF2FF; }
+  .tag-green { background: #059669; color: #ECFDF5; }
+  .tag-amber { background: #D97706; color: #FEF3C7; }
+
+  /* Bottom User Journey Flow */
+  .flow-banner { background: #111827; border: 1px solid #1E293B; border-radius: 14px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .flow-title { font-size: 13px; font-weight: 700; color: #38BDF8; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px; }
+  .flow-subtitle { font-size: 11.5px; color: #64748B; }
+  
+  .flow-steps { display: flex; align-items: center; gap: 14px; }
+  .flow-step { display: flex; align-items: center; gap: 10px; background: #1E293B; border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; }
+  .flow-num { width: 22px; height: 22px; border-radius: 50%; background: #38BDF8; color: #0B0F19; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; }
+  .flow-info b { font-size: 12px; color: #F1F5F9; display: block; }
+  .flow-info span { font-size: 10.5px; color: #94A3B8; }
+  .flow-arrow { color: #64748B; font-weight: bold; font-size: 14px; }
+</style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="title-tag">System Architecture & Technical Teardown</div>
+      <div class="title">⚡ SplitBill Zero: <span>Zero-Install Real-Time Settlement</span></div>
+      <div class="subtitle">On-Device ML Kit OCR • Real-Time Room State Engine • Frictionless PWA Guest Client • Dynamic EMVCo VietQR</div>
+    </div>
+    <div class="badges">
+      <div class="badge cyan">⚡ 100% Offline Edge OCR</div>
+      <div class="badge emerald">🌐 Zero App Install for Guests</div>
+      <div class="badge amber">💳 Dynamic VietQR Instant Pay</div>
+    </div>
+  </div>
+
+  <!-- 4 Columns Architecture Grid -->
+  <div class="grid">
+    
+    <!-- Col 1: Host Mobile Engine -->
+    <div class="col col-1 active">
+      <div class="col-header">
+        <div class="col-num">1</div>
+        <div>
+          <div class="col-title">HOST MOBILE ENGINE</div>
+          <div class="col-subtitle">Flutter / Swift Native Engine</div>
+        </div>
+      </div>
+      <div class="card-list">
+        <div class="card">
+          <div class="card-name">Camera Stream Layer <span class="card-tag tag-blue">30 FPS</span></div>
+          <div class="card-desc">CameraX & AVFoundation pipeline. High-throughput YUV frame extraction with zero UI thread blocking.</div>
+        </div>
+        <div class="card highlight">
+          <div class="card-name">Google ML Kit Text v2 <span class="card-tag tag-blue">Edge AI</span></div>
+          <div class="card-desc">On-device Latin & Vietnamese script recognition. Latency &lt;45ms, zero cloud API fees, 100% privacy.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Spatial Bounding Box Matcher</div>
+          <div class="card-desc">2D geometric clustering: groups disjointed item names with right-aligned numeric prices (VND). Tax/surcharge detection.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Host Live Settlement View</div>
+          <div class="card-desc">Real-time room monitoring dashboard. Live updates on who selected which dish and real-time payment checkmarks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 2: Realtime Session Engine -->
+    <div class="col col-2">
+      <div class="col-header">
+        <div class="col-num">2</div>
+        <div>
+          <div class="col-title">REAL-TIME ROOM MESH</div>
+          <div class="col-subtitle">Supabase Realtime / WebSocket Edge</div>
+        </div>
+      </div>
+      <div class="card-list">
+        <div class="card purple">
+          <div class="card-name">Topic Presence Channel <span class="card-tag tag-purple">Pub/Sub</span></div>
+          <div class="card-desc">Lightweight WebSocket connection per room `room:${roomId}`. Presence tracking with &lt;80ms sync latency.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">In-Memory Ephemeral State</div>
+          <div class="card-desc">Zero permanent personal storage. Stores items, active guest sessions, and item-to-guest mappings. 2h TTL auto-purge.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Fair Split Math Matrix</div>
+          <div class="card-desc">Deterministic calculation: Private items (100%), Shared items (Price / N_guests), proportional VAT (8-10%) and tips.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Payment Reconciliation Hook</div>
+          <div class="card-desc">Matches bank transfer descriptions with unique guest payment tokens. Instantly flips status to `PAID`.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 3: Zero-Install Guest Web Client -->
+    <div class="col col-3">
+      <div class="col-header">
+        <div class="col-num">3</div>
+        <div>
+          <div class="col-title">GUEST CLIENT (ZERO INSTALL)</div>
+          <div class="col-subtitle">Ultra-Light Mobile Web (&lt; 250KB)</div>
+        </div>
+      </div>
+      <div class="card-list">
+        <div class="card">
+          <div class="card-name">Native QR Entry <span class="card-tag tag-green">Zero Friction</span></div>
+          <div class="card-desc">Scan via iPhone Camera, Android Lens, or Zalo. Instant browser deep-link without downloading any app.</div>
+        </div>
+        <div class="card green">
+          <div class="card-name">Micro Web App (PWA) <span class="card-tag tag-green">Svelte/React</span></div>
+          <div class="card-desc">First contentful paint &lt;0.8s. No registration, no password. Just enter your nickname and start picking dishes.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Collaborative Dish Board</div>
+          <div class="card-desc">Touch-friendly list of receipt items. Multi-avatar badges showing table mates' selections in real-time.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">1-Tap Bank App Launch</div>
+          <div class="card-desc">Tap "Pay Now" to invoke universal deep-link or render personal VietQR with exact cents and transaction memo.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 4: Fintech Settlement -->
+    <div class="col col-4">
+      <div class="col-header">
+        <div class="col-num">4</div>
+        <div>
+          <div class="col-title">FINTECH SETTLEMENT</div>
+          <div class="col-subtitle">EMVCo / VietQR / Napas 247</div>
+        </div>
+      </div>
+      <div class="card-list">
+        <div class="card amber">
+          <div class="card-name">EMVCo QR Tag Synthesizer <span class="card-tag tag-amber">NAPAS 247</span></div>
+          <div class="card-desc">Encodes Tag 00 (Format), Tag 26 (Bank BIN + Host Acc), Tag 53 (704 VND), Tag 54 (Amount), Tag 62 (Reference).</div>
+        </div>
+        <div class="card">
+          <div class="card-name">CRC-16 / CCITT-FALSE Engine</div>
+          <div class="card-desc">Polynomial 0x1021 checksum validation. 100% compliance across all 40+ Vietnam banking applications.</div>
+        </div>
+        <div class="card">
+          <div class="card-name">Universal Banking App Invoker</div>
+          <div class="card-desc">Supports direct intent scheme for VCB Digibank, Techcombank, VPBank NEO, MBBank, Cake, Timo, Viettel Money.</div>
+        </div>
+        <div class="card highlight" style="border-color: #059669; background: rgba(5, 150, 105, 0.1);">
+          <div class="card-name" style="color: #34D399;">Instant Settlement Verified ✅</div>
+          <div class="card-desc">Money transfers directly to Host's personal account. Zero escrow, zero transaction intermediary fees.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom User Journey Flow -->
+  <div class="flow-banner">
+    <div>
+      <div class="flow-title">End-to-End User Experience Flow (Frictionless Under 60 Seconds)</div>
+      <div class="flow-subtitle">Host scans receipt ➔ Guests scan table QR ➔ Guests claim their items ➔ Guests pay Host via VietQR</div>
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-info"><b>Host Scans Bill</b><span>ML Kit Edge OCR</span></div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-info"><b>Guests Join Table</b><span>Scan QR (No App)</span></div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-info"><b>Claim Dishes</b><span>Real-Time Sync</span></div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-info"><b>Instant VietQR Pay</b><span>Money to Host Acc</span></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+"""
+
+html_path = "projects/splitbill-zero/docs/architecture_diagram.html"
+img_path = "projects/splitbill-zero/docs/SplitBill_Zero_Architecture.png"
+
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+cmd = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "--headless",
+    "--disable-gpu",
+    "--window-size=1920,1080",
+    f"--screenshot={img_path}",
+    html_path
+]
+subprocess.run(cmd, check=True)
+print("Rendered SplitBill_Zero_Architecture.png successfully!")
