@@ -34,41 +34,39 @@
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## 🏗️ System Architecture & Subsystems Specification
+
+The system is architected into 4 decoupled, high-cohesion subsystems adhering to strict clean-architecture boundaries:
 
 ![SplitBill Zero System Architecture](docs/SplitBill_Zero_Architecture.png)
 
-*Editable Draw.io source available at: [`docs/SplitBill_Zero_Architecture.drawio`](docs/SplitBill_Zero_Architecture.drawio)*
+*Editable Draw.io source available at: [`docs/SplitBill_Zero_Architecture.drawio`](docs/SplitBill_Zero_Architecture.drawio) (Import into [app.diagrams.net](https://app.diagrams.net))*
+
+### Subsystems Breakdown:
+- **Subsystem A (Client Interaction Layer):** Flutter 3.x Host Master Engine & Ultra-lightweight Guest PWA Web Client (< 250KB).
+- **Subsystem B (On-Device Ingestion & OCR Engine):** CameraX/AVFoundation streaming buffer, Google ML Kit v2 OCR, 2D Spatial Geometric Clustering ($|\Delta Y| \le 0.5 \times \text{LineHeight}$), and Tax/Surcharge Distributer.
+- **Subsystem C (Collaborative Session Mesh):** WebSocket / Supabase Realtime Gateway under topic `room:${roomId}`, in-memory ephemeral store with 2-hour TTL auto-eviction, and Fair-Split Math Matrix.
+- **Subsystem D (Banking & Settlement Gateway):** EMVCo QR Tag Synthesizer (NAPAS 247), CRC-16/CCITT-FALSE Checksum Engine (Poly `0x1021`), and Payment Event Reconciliation Listener.
 
 ---
 
-### Component Deep-Dive
+## 🔄 End-to-End UML Sequence Diagram
 
-#### 1. Host Mobile Engine (`/apps/mobile-host`)
-* **Camera Stream:** Leverages CameraX (Android) and AVFoundation (iOS) high-throughput frame streaming pipeline.
-* **On-Device ML Kit:** Offline Latin/Vietnamese text recognition (`google_mlkit_text_recognition`).
-* **Spatial Bounding Box Clustering Algorithm:** Analyzes line heights, horizontal gaps, and currency symbols (`đ`, `k`, `VND`) to reliably correlate multi-line item titles with right-aligned numeric amounts.
+The interaction protocol across the 5 distinct phases from camera ingestion to Napas 24/7 instant settlement:
 
-#### 2. Real-Time Room Mesh (`/packages/realtime-engine`)
-* **Transport:** Supabase Realtime Channels / WebSocket PubSub.
-* **Topic Routing:** `room:${roomId}`.
-* **Ephemeral State Store:** In-memory session representation with 2-hour automatic TTL auto-purge. No personal dining records are permanently persisted, guaranteeing user privacy.
-* **Fair Split Mathematical Matrix:**
-  $$\text{Individual Cost} = \sum \text{Private Items} + \sum \left( \frac{\text{Shared Item Price}}{N_{\text{claimants}}} \right) + \text{Proportional Tax/Tips}$$
+![SplitBill Zero Sequence Diagram](docs/SplitBill_Zero_Sequence_Diagram.png)
 
-#### 3. Frictionless Guest Client (`/apps/guest-web`)
-* **Zero App Barrier:** Mobile-first Progressive Web App built with Svelte/React.
-* **Load Performance:** Compressed bundle < 250KB, First Contentful Paint (FCP) < 800ms.
-* **Optimistic UI:** Immediate haptic feedback and local state updates with conflict resolution for concurrent item claiming.
+---
 
-#### 4. Fintech Settlement Engine (`/packages/vietqr-engine`)
-* **EMVCo Compliance:** Generates Tag-Length-Value (TLV) payload strictly adhering to NAPAS 247 specification:
-  * `Tag 00`: Payload Format Indicator (`01`)
-  * `Tag 26`: Merchant Account Information (NAPAS BIN + Host Account Number)
-  * `Tag 53`: Transaction Currency (`704` for VND)
-  * `Tag 54`: Transaction Amount (Calculated individual bill)
-  * `Tag 62`: Additional Data Field (Bill ID + Guest Name)
-* **Checksum Verification:** 16-bit Cyclic Redundancy Check (`CRC-16/CCITT-FALSE`, polynomial `0x1021`) guaranteeing 100% scanning success rate across Vietcombank, Techcombank, VPBank NEO, MBBank, and 40+ member banks.
+## 🧠 Algorithmic Pipeline: OCR Spatial Clustering & Line Matching
+
+Raw OCR extracts unstructured text blocks scattered in 2D coordinates. SplitBill Zero utilizes a spatial grouping heuristic to reconstruct receipt tabular geometry:
+
+![SplitBill Zero OCR Flowchart](docs/SplitBill_Zero_OCR_Flowchart.png)
+
+### Mathematical Clustering Formulation:
+$$\text{Vertical Closeness Condition:} \quad |Y_{\text{price}} - Y_{\text{item}}| \le \theta_{\text{line\_height}} \times 0.5$$
+$$\text{Horizontal Alignment Check:} \quad X_{\text{price}} > X_{\text{item}} \quad (\text{Right-aligned price pattern})$$
 
 ---
 
@@ -84,25 +82,13 @@ splitbill-zero/
 │   ├── realtime-engine/        # Supabase/WebSocket room presence & state sync
 │   └── vietqr-engine/          # EMVCo TLV string generator & CRC16 checksum encoder
 ├── docs/
-│   ├── SplitBill_Zero_Architecture.drawio   # Editable system design diagram
+│   ├── SplitBill_Zero_Architecture.drawio   # Editable enterprise system design diagram
 │   ├── SplitBill_Zero_Architecture.png      # High-res architecture export
+│   ├── SplitBill_Zero_Sequence_Diagram.png  # Standard UML Sequence Diagram
+│   ├── SplitBill_Zero_OCR_Flowchart.png     # Algorithmic spatial matching flowchart
 │   └── SplitBill_Zero_UI_Showcase.png       # Production UI/UX spec & design showcase
 └── README.md
 ```
-
----
-
-## 🎨 Design Specification & Figma Assets
-
-The complete production design system is architected in Figma, adhering to high-density modern mobile UX standards:
-
-* **Figma Public Design Link:** [SplitBill Zero Design Specification on Figma](https://www.figma.com/design/splitbill-zero-showcase)
-* **Design System Palette:**
-  * Background: Slate Night `#0B0F19` / Deep Navy `#0F172A`
-  * Primary Accent: Cyber Sky `#38BDF8` (Host Engine)
-  * Real-Time Mesh: Indigo Aura `#6366F1`
-  * Action/Success: Emerald Leaf `#10B981` (Guest Web & Verification)
-  * Fintech/Gold: Amber Sun `#F59E0B` (VietQR / Napas 247)
 
 ---
 
