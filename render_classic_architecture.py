@@ -1,0 +1,221 @@
+import subprocess
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  body { background: #FFFFFF; color: #212529; width: 1920px; height: 1080px; padding: 36px 44px; display: flex; flex-direction: column; justify-content: space-between; }
+  
+  /* Header */
+  .header { border-bottom: 2px solid #E9ECEF; padding-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .title { font-size: 24px; font-weight: 700; color: #000000; }
+  .subtitle { font-size: 13px; color: #6C757D; margin-top: 3px; }
+  .meta-tag { font-size: 12px; color: #495057; background: #F8F9FA; border: 1px solid #CED4DA; padding: 6px 12px; border-radius: 4px; font-weight: 500; }
+
+  /* 4 Subsystem Columns (Draw.io classic layout) */
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; flex: 1; margin: 20px 0; }
+  
+  .subsystem { background: #F8F9FA; border: 1px solid #CED4DA; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; }
+  .subsystem-header { font-size: 13px; font-weight: 700; color: #343A40; text-align: center; border-bottom: 1px solid #DEE2E6; padding-bottom: 8px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  .box-list { display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: space-between; }
+  
+  /* Draw.io Clean Box */
+  .box { background: #FFFFFF; border: 1px solid #ADB5BD; border-radius: 4px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .box-title { font-size: 12.5px; font-weight: 700; color: #212529; display: flex; justify-content: space-between; align-items: center; }
+  .box-tag { font-size: 10px; color: #6C757D; font-weight: 600; text-transform: uppercase; }
+  .box-divider { height: 1px; background: #E9ECEF; margin: 5px 0; }
+  .box-desc { font-size: 11px; color: #495057; line-height: 1.4; }
+
+  /* Flow Steps Footer */
+  .footer { border-top: 1px solid #E9ECEF; padding-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-title { font-size: 12px; font-weight: 700; color: #495057; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  .steps { display: flex; gap: 14px; align-items: center; }
+  .step { background: #F8F9FA; border: 1px solid #CED4DA; border-radius: 4px; padding: 6px 14px; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .step-num { width: 18px; height: 18px; border-radius: 50%; background: #495057; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .step-arrow { color: #6C757D; font-size: 12px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="title">SplitBill Zero — System Architecture & Component Interaction Diagram</div>
+      <div class="subtitle">Standard UML & Subsystem Decomposition: Host Interaction, Edge AI OCR, Collaborative Room Mesh, and Financial Settlement</div>
+    </div>
+    <div class="meta-tag">Draw.io Reference Specification • ISO/IEC 18004 • EMVCo Standard</div>
+  </div>
+
+  <!-- Subsystem Grid -->
+  <div class="grid">
+
+    <!-- Subsystem 1: Client Layer -->
+    <div class="subsystem">
+      <div class="subsystem-header">1. Client Interaction Subsystem</div>
+      <div class="box-list">
+        <div class="box">
+          <div class="box-title">Host Application <span class="box-tag">Flutter 3.x</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Manages camera session, receipt ingestion, room creation, and final table settlement monitoring.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Guest Web Client <span class="box-tag">Svelte / PWA</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Zero-install mobile web client (<250KB). Loaded via QR scan with zero authentication friction.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Collaborative Dish Board <span class="box-tag">UI Component</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Synchronized canvas of line items with real-time peer selection tags and instant subtotal calculation.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Universal Bank Intent Router <span class="box-tag">Mobile OS Intent</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Invokes registered banking app schemes on iOS/Android with pre-filled payment details.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Host Settlement Monitor <span class="box-tag">WebSocket Client</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Live table dashboard tracking paid vs. pending transfers with real-time peer checkmarks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subsystem 2: Edge OCR -->
+    <div class="subsystem">
+      <div class="subsystem-header">2. Edge Ingestion & OCR Subsystem</div>
+      <div class="box-list">
+        <div class="box">
+          <div class="box-title">Frame Extraction Pipeline <span class="box-tag">CameraX / AVFound.</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Captures 30fps YUV420 image buffers with hardware auto-focus and illumination normalization.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">On-Device Text Recognition <span class="box-tag">ML Kit v2</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Neural Latin/Vietnamese text recognition engine running offline on device NPU/CPU.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Spatial 2D Geometric Clustering <span class="box-tag">Algorithm</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Groups fragmented text blocks by vertical proximity (|ΔY| ≤ 0.5 * LineHeight) and pairs names with VND prices.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Receipt Normalizer & Tax Allocator <span class="box-tag">Parser Core</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Extracts subtotal, VAT (8-10%), and service surcharges into structured BillItem collections.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Sum Discrepancy Validator <span class="box-tag">Integrity Check</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Validates sum of parsed items against receipt grand total. Flags discrepancies for host confirmation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subsystem 3: Collaborative Mesh -->
+    <div class="subsystem">
+      <div class="subsystem-header">3. Collaborative Mesh Subsystem</div>
+      <div class="box-list">
+        <div class="box">
+          <div class="box-title">WebSocket Realtime Gateway <span class="box-tag">Supabase WS</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Low-latency bidirectional Pub/Sub message broker routing room state on topic `room:${roomId}`.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">In-Memory Session Store <span class="box-tag">Redis / Edge KV</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Transient cache holding table state, line items, and guest claims. Configured with 2-hour TTL auto-purge.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Fair-Split Mathematical Matrix <span class="box-tag">Math Engine</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Deterministic split engine: Individual Cost = Private + (Shared / N_guests) + Proportional VAT.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Peer Presence Daemon <span class="box-tag">State Tracker</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Monitors connection health, detects disconnects, and maintains authoritative active participant roster.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Payment Event Reconciler <span class="box-tag">Consumer</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Consumes incoming settlement webhook notifications and broadcasts `PAID` events to the room.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subsystem 4: Fintech Settlement -->
+    <div class="subsystem">
+      <div class="subsystem-header">4. Fintech Settlement Subsystem</div>
+      <div class="box-list">
+        <div class="box">
+          <div class="box-title">EMVCo Tag Synthesizer <span class="box-tag">NAPAS 247</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Encodes payload: Tag 00 (Format), Tag 26 (Bank BIN + Acc), Tag 53 (704 VND), Tag 54 (Amount), Tag 62 (Memo).</div>
+        </div>
+        <div class="box">
+          <div class="box-title">CRC-16 / CCITT-FALSE Engine <span class="box-tag">Checksum</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Calculates standard 16-bit redundancy polynomial 0x1021 ensuring 100% banking scanner compatibility.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Dynamic QR Matrix Generator <span class="box-tag">ISO 18004</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Generates crisp vector ISO/IEC 18004 QR codes containing individualized payment data.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Guest Banking Applications <span class="box-tag">40+ VN Banks</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Vietcombank, Techcombank, VPBank NEO, MBBank, Timo, Cake, Viettel Money, and partner apps.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Napas 24/7 Interbank Network <span class="box-tag">Instant Clearing</span></div>
+          <div class="box-divider"></div>
+          <div class="box-desc">Facilitates instant real-time settlement directly into Host bank account. Zero escrow, zero fees.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer Flow Steps -->
+  <div class="footer">
+    <div class="footer-title">End-to-End Operational Lifecycle:</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div> Ingest Receipt (Edge OCR)</div>
+      <div class="step-arrow">➔</div>
+      <div class="step"><div class="step-num">2</div> Host Broadcasts Room QR</div>
+      <div class="step-arrow">➔</div>
+      <div class="step"><div class="step-num">3</div> Guests Join via Web (Zero-Install)</div>
+      <div class="step-arrow">➔</div>
+      <div class="step"><div class="step-num">4</div> Real-time Dish Claiming</div>
+      <div class="step-arrow">➔</div>
+      <div class="step"><div class="step-num">5</div> Dynamic VietQR Napas 24/7 Pay</div>
+    </div>
+  </div>
+
+</body>
+</html>
+"""
+
+html_path = "projects/splitbill-zero/docs/architecture_classic.html"
+img_path = "projects/splitbill-zero/docs/SplitBill_Zero_Architecture.png"
+
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+cmd = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "--headless",
+    "--disable-gpu",
+    "--window-size=1920,1080",
+    f"--screenshot={img_path}",
+    f"file:///Users/ducphan/Documents/trae_projects/openclaw_manager/openclaw_data/.openclaw/workspace/{html_path}"
+]
+subprocess.run(cmd, check=True)
+print("Rendered Draw.io clean architecture PNG successfully!")

@@ -54,7 +54,58 @@ The system is architected into 4 decoupled, high-cohesion subsystems adhering to
 
 The interaction protocol across the 5 distinct phases from camera ingestion to Napas 24/7 instant settlement:
 
-![SplitBill Zero Sequence Diagram](docs/SplitBill_Zero_Sequence_Diagram.png)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Host as Table Host (Phan Minh Duc)
+    participant App as Mobile Host App (Flutter)
+    participant MLKit as Edge OCR (ML Kit v2)
+    participant Gateway as Realtime Mesh (Supabase)
+    actor Guest as Dining Guest (Nam / Linh)
+    participant Web as Guest Mobile Web (PWA)
+    participant VietQR as EMVCo VietQR Engine
+    participant Bank as Guest Banking App
+
+    Note over Host,App: Phase 1: Receipt Ingestion & Spatial Line Matching
+    Host->>App: Points camera at dining receipt
+    App->>MLKit: Stream camera frames (YUV420 buffer)
+    MLKit-->>App: RecognizedText (Blocks, Lines, BoundingBoxes)
+    App->>App: 2D Spatial Clustering (Correlate item name with price)
+    App-->>Host: Live bounding box overlay on bill
+    Host->>App: Verifies items & taps "Create Room"
+
+    Note over App,Gateway: Phase 2: Session Initialization & Table Broadcast
+    App->>Gateway: POST /rooms {roomId, items[], hostBankInfo}
+    Gateway-->>App: Room Created (Status: OPEN, TTL: 2 Hours)
+    App->>Host: Display Table Joining QR (bill.io/r/VN8842)
+
+    Note over Guest,Web: Phase 3: Zero-Install Participation
+    Guest->>App: Scans Table QR with native Camera / Zalo
+    Guest->>Web: Opens bill.io/r/VN8842 (No app install, Bundle < 250KB)
+    Web->>Gateway: Subscribe to WebSocket channel `room:VN8842`
+    Gateway-->>Web: Push initial room snapshot (items[], activeMembers[])
+    Guest->>Web: Enters nickname ("Nam")
+
+    Note over Guest,Gateway: Phase 4: Real-Time Collaborative Item Claiming
+    Guest->>Web: Taps dish items (Trà Đào: 45k, Lẩu Bò: Shared 3 people)
+    Web->>Gateway: Broadcast `item_claimed` {itemId, guestId, isShared}
+    Gateway->>Gateway: Calculate Fair Split Matrix (Private + Shared/N + Proportional VAT)
+    Gateway-->>Web: Broadcast updated room state to all connected guests
+    Gateway-->>App: Sync real-time table dashboard on Host phone
+
+    Note over Guest,Bank: Phase 5: Dynamic VietQR Settlement & Napas 24/7 Transfer
+    Guest->>Web: Taps "Confirm & Settle" (Total: 161,600 VND)
+    Web->>VietQR: GeneratePayload(HostBIN, HostAcc, 161600, "NAM TRA TIEN LAU")
+    VietQR->>VietQR: Synthesize EMVCo TLV string & calculate CRC-16 (Poly 0x1021)
+    VietQR-->>Web: Return Dynamic VietQR string & Banking Universal Deep-link
+    Web-->>Guest: Render Dynamic VietQR + "Pay via Banking App" button
+    Guest->>Bank: Taps button (Auto-fills Recipient, Amount, Reference Note)
+    Guest->>Bank: Authenticates biometric payment (FaceID / Fingerprint)
+    Bank-->>Host: Money instantly transferred to Host Bank Account
+    Guest->>Web: Taps "Confirm Paid"
+    Web->>Gateway: Broadcast `payment_completed` {guestId}
+    Gateway-->>App: Update guest badge to PAID (Checkmark)
+```
 
 ---
 
@@ -62,7 +113,45 @@ The interaction protocol across the 5 distinct phases from camera ingestion to N
 
 Raw OCR extracts unstructured text blocks scattered in 2D coordinates. SplitBill Zero utilizes a spatial grouping heuristic to reconstruct receipt tabular geometry:
 
-![SplitBill Zero OCR Flowchart](docs/SplitBill_Zero_OCR_Flowchart.png)
+```mermaid
+flowchart TD
+    A([Camera Stream: YUV420 Frame]) --> B[Google ML Kit Text Recognition v2]
+    B --> C[Extract TextBlocks, Lines & BoundingBoxes]
+    
+    subgraph Preprocessing [Spatial & Lexical Preprocessing]
+        C --> D[Identify Document Vertical Orientation & Angle]
+        D --> E[Filter Out Noise Elements: Logo, Address, Date/Time]
+    end
+
+    subgraph GeometricMatching [Spatial 2D Geometric Clustering]
+        E --> F[Cluster Text Elements by Vertical Band: delta Y &lt;= 0.5 * LineHeight]
+        F --> G{Line Contains Numeric Token?}
+        G -- Yes --> H[Check Right-Aligned Token with Currency Formats: k, đ, VND, ., ,]
+        G -- No --> I[Candidate Multi-line Dish Name]
+        I --> J[Merge with vertically adjacent below block if aligned left]
+        H --> K[Candidate Price Value Entity]
+        J --> L[Pair Name Entity with Right-Aligned Price Entity]
+        K --> L
+    end
+
+    subgraph BusinessValidation [Financial Reconciliation & Tax Distribution]
+        L --> M{Is Subtotal / Total / VAT Tag?}
+        M -- Yes: Total Tag --> N[Store as Baseline Target Total]
+        M -- Yes: VAT/Service Tag --> O[Compute Tax Percentage or Absolute Surcharge]
+        M -- No: Standard Dish --> P[Append to LineItems Collection]
+        
+        N --> Q[Reconcile: Sum of LineItems vs Target Total]
+        O --> Q
+        P --> Q
+        
+        Q --> R{Discrepancy Detected?}
+        R -- Yes --> S[Flag Line for Host Manual Confirmation]
+        R -- No --> T[Validated Receipt JSON Entity]
+    end
+
+    S --> U([Render Verification Screen on Mobile Host])
+    T --> U
+```
 
 ### Mathematical Clustering Formulation:
 $$\text{Vertical Closeness Condition:} \quad |Y_{\text{price}} - Y_{\text{item}}| \le \theta_{\text{line\_height}} \times 0.5$$
@@ -117,6 +206,15 @@ cd apps/mobile-host
 flutter pub get
 flutter run
 ```
+
+---
+
+## 🎨 Official UI/UX Design System (Figma)
+
+The complete production design file is hosted and maintained on Figma:
+
+* 🔗 **Figma Project File:** [SplitBill Zero UI/UX Specification on Figma](https://www.figma.com/design/o8mIiPoLyks3y0BV7fQ3sw/Untitled?node-id=0-1&p=f&t=XjQc695CtCxboMY7-0)
+* **Screen Specifications:** Host Camera Receipt Scanner, Table Room QR, Collaborative Guest PWA, Dynamic VietQR Instant Settle.
 
 ---
 
