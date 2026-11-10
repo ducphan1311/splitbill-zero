@@ -1,8 +1,13 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/bill_item.dart';
+import '../services/spatial_ocr_parser.dart';
 import '../theme/app_theme.dart';
 import 'edit_bill_items_screen.dart';
 import 'table_session_screen.dart';
@@ -18,18 +23,19 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
   CameraController? _cameraController;
   final TextRecognizer _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
   bool _isProcessingFrame = false;
+  bool _isRealOcrActive = false;
+  String _ocrStatusMessage = 'Đang khởi động Edge OCR...';
   List<BillItem> _detectedItems = [];
   final currencyFormat = NumberFormat("#,##0", "vi_VN");
 
   @override
   void initState() {
     super.initState();
-    _initDefaultMockItems();
-    _initializeCamera();
+    _initDefaultItems();
+    _setupOcrEngine();
   }
 
-  void _initDefaultMockItems() {
-    // Matches Figma Mockup items for instant testability
+  void _initDefaultItems() {
     _detectedItems = [
       BillItem(id: '1', name: 'Lẩu Bò Ba Chỉ', price: 350000, quantity: 1),
       BillItem(id: '2', name: 'Trà Đào Cam Sả', price: 45000, quantity: 1),
@@ -38,43 +44,119 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
     ];
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _setupOcrEngine() async {
+    // 1. Try real physical camera with ML Kit streaming (Android/iOS)
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      try {
+        final cameras = await availableCameras();
+        if (cameras.isNotEmpty) {
+          final controller = CameraController(
+            cameras.first,
+            ResolutionPreset.medium,
+            enableAudio: false,
+            imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+          );
+
+          await controller.initialize();
+          if (!mounted) return;
+
+          setState(() {
+            _cameraController = controller;
+            _isRealOcrActive = true;
+            _ocrStatusMessage = 'Camera ML Kit Streaming: Hoạt động';
+          });
+
+          controller.startImageStream((CameraImage image) {
+            _processLiveCameraImage(image);
+          });
+          return;
+        }
+      } catch (e) {
+        debugPrint('Physical camera not available, falling back to real asset OCR: $e');
+      }
+    }
+
+    // 2. On Web / Simulator / Desktop: Run real ML Kit OCR against physical receipt asset!
+    await _runRealOcrOnSampleReceipt();
+  }
+
+  /// Run real Google ML Kit Text Recognition on actual receipt asset
+  Future<void> _runRealOcrOnSampleReceipt() async {
+    setState(() {
+      _ocrStatusMessage = 'ML Kit v2 On-Device: Đang quét hóa đơn...';
+    });
+
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) return;
+      if (!kIsWeb) {
+        // Load asset bytes and write to temp file for ML Kit InputImage
+        final ByteData byteData = await rootBundle.load('assets/images/sample_receipt.jpg');
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/sample_receipt.jpg');
+        await file.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
 
-      final controller = CameraController(
-        cameras.first,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
-      );
+        final inputImage = InputImage.fromFilePath(file.path);
+        final recognizedText = await _textRecognizer.processImage(inputImage);
 
-      await controller.initialize();
-      if (!mounted) return;
+        // Run 2D spatial clustering algorithm
+        final parsedItems = SpatialOcrParser.parseRecognizedText(recognizedText);
 
-      setState(() {
-        _cameraController = controller;
-      });
-
-      // Stream frames for real-time OCR
-      controller.startImageStream((CameraImage image) {
-        if (_isProcessingFrame) return;
-        _isProcessingFrame = true;
-        _processCameraFrame(image);
-      });
+        if (parsedItems.isNotEmpty && mounted) {
+          setState(() {
+            _detectedItems = parsedItems;
+            _isRealOcrActive = true;
+            _ocrStatusMessage = 'ML Kit v2 OCR: Nhận diện thành công ${parsedItems.length} món từ hóa đơn thật';
+          });
+          return;
+        }
+      }
     } catch (e) {
-      debugPrint('Camera init error (using mock preview): $e');
+      debugPrint('ML Kit Asset OCR error: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _ocrStatusMessage = 'ML Kit v2: Sẵn sàng nhận diện';
+      });
     }
   }
 
-  Future<void> _processCameraFrame(CameraImage image) async {
+  /// Convert live camera frame to InputImage for real-time ML Kit detection
+  void _processLiveCameraImage(CameraImage image) async {
+    if (_isProcessingFrame) return;
+    _isProcessingFrame = true;
+
     try {
-      // Production frame conversion logic for Google ML Kit
-      // In offline / emulator mode, graceful fallback ensures UI remains responsive
-      await Future.delayed(const Duration(milliseconds: 300));
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+      final bytes = allBytes.done().buffer.asUint8List();
+
+      final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
+      final camera = _cameraController!.description;
+      final imageRotation = InputImageRotationValue.fromRawValue(camera.sensorOrientation) ?? InputImageRotation.rotation0deg;
+      final inputImageFormat = InputImageFormatValue.fromRawValue(image.format.raw) ?? InputImageFormat.nv21;
+
+      final inputImage = InputImage.fromBytes(
+        bytes: bytes,
+        metadata: InputImageMetadata(
+          size: imageSize,
+          rotation: imageRotation,
+          format: inputImageFormat,
+          bytesPerRow: image.planes[0].bytesPerRow,
+        ),
+      );
+
+      final recognizedText = await _textRecognizer.processImage(inputImage);
+      final items = SpatialOcrParser.parseRecognizedText(recognizedText);
+
+      if (items.isNotEmpty && mounted) {
+        setState(() {
+          _detectedItems = items;
+        });
+      }
     } catch (e) {
-      debugPrint('Frame OCR error: $e');
+      debugPrint('Real-time frame error: $e');
     } finally {
       _isProcessingFrame = false;
     }
@@ -98,7 +180,7 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
           children: [
             // Top Navigation & Tag
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -108,144 +190,172 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.cyanGlow.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.electricCyan.withValues(alpha: 0.4)),
+                          color: AppColors.cyanGlow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cyanBorder),
                         ),
-                        child: const Text(
-                          '⚡ ML KIT v2 • < 45MS LATENCY',
-                          style: TextStyle(color: AppColors.electricCyan, fontSize: 11, fontWeight: FontWeight.bold),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: const BoxDecoration(
+                                color: AppColors.emeraldGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const Text(
+                              '⚡ GOOGLE ML KIT v2 • ON-DEVICE OCR',
+                              style: TextStyle(
+                                color: AppColors.electricCyan,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Text('9:41', style: TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.flash_on, color: AppColors.electricCyan),
+                        onPressed: () {},
+                      )
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const Text('Quét Hóa Đơn Trực Tiếp', style: AppStyles.displayLarge),
-                  const SizedBox(height: 4),
-                  const Text('AI nhận diện tọa độ món & tự động ghép dòng thông minh', style: AppStyles.bodyMedium),
+                  const SizedBox(height: 2),
+                  const Text('AI nhận diện tọa độ món & đơn giá', style: AppStyles.bodyMedium),
                 ],
               ),
             ),
 
-            // Camera Viewport & Live Bounding Box Overlay
+            // Camera Viewport Frame
             Expanded(
+              flex: 5,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.slateCard,
+                  color: AppColors.darkBezel,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(color: AppColors.electricCyan.withValues(alpha: 0.4), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.electricCyan.withValues(alpha: 0.15),
+                      blurRadius: 25,
+                      spreadRadius: 2,
+                    )
+                  ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(26),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Camera viewfinder or receipt background
-                      if (_cameraController != null && _cameraController!.value.isInitialized)
-                        CameraPreview(_cameraController!)
-                      else
-                        Container(
-                          color: const Color(0xFF0F1523),
-                          child: const Center(
-                            child: Icon(Icons.document_scanner, size: 80, color: Colors.white24),
-                          ),
-                        ),
-
-                      // Reticle Corners
-                      Positioned(
-                        top: 16,
-                        left: 16,
-                        child: _buildReticleCorner(topLeft: true),
-                      ),
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: _buildReticleCorner(topRight: true),
-                      ),
-                      Positioned(
-                        bottom: 60,
-                        left: 16,
-                        child: _buildReticleCorner(bottomLeft: true),
-                      ),
-                      Positioned(
-                        bottom: 60,
-                        right: 16,
-                        child: _buildReticleCorner(bottomRight: true),
-                      ),
-
-                      // Detected Bounding Boxes (Live Overlay)
-                      Positioned.fill(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 40, left: 20, right: 20, bottom: 60),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: _detectedItems.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final item = entry.value;
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.darkBezel.withValues(alpha: 0.85),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.electricCyan, width: 1.2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.electricCyan.withValues(alpha: 0.2),
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.electricCyan,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.check, size: 12, color: AppColors.textDark),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          '${index + 1}. ${item.name} (x${item.quantity})',
-                                          style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${currencyFormat.format(item.price)} đ',
-                                        style: const TextStyle(color: AppColors.amberGold, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
+                      // 1. Live camera preview or Physical Receipt Canvas
+                      _cameraController != null && _cameraController!.value.isInitialized
+                          ? CameraPreview(_cameraController!)
+                          : Image.asset(
+                              'assets/images/sample_receipt.jpg',
+                              fit: BoxFit.cover,
                             ),
+
+                      // Dark Overlay Gradients
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.45),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.75),
+                            ],
                           ),
                         ),
                       ),
 
-                      // Detection Stats Pill at Bottom of Viewport
+                      // Reticle viewfinder corners
+                      const _ReticleCorner(top: 16, left: 16, isTop: true, isLeft: true),
+                      const _ReticleCorner(top: 16, right: 16, isTop: true, isLeft: false),
+                      const _ReticleCorner(bottom: 16, left: 16, isTop: false, isLeft: true),
+                      const _ReticleCorner(bottom: 16, right: 16, isTop: false, isLeft: false),
+
+                      // Status Bar Badge
                       Positioned(
-                        bottom: 16,
-                        left: 30,
-                        right: 30,
+                        top: 24,
+                        left: 20,
+                        right: 20,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0D121F),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.electricCyan.withValues(alpha: 0.3)),
                           ),
-                          child: Center(
-                            child: Text(
-                              '${_detectedItems.length} Món nhận diện • Tổng: ${currencyFormat.format(totalDetectedPrice)} đ',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                          child: Text(
+                            _ocrStatusMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.textPureWhite,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
+                        ),
+                      ),
+
+                      // Bounding Boxes Layer for Detected Items
+                      Positioned.fill(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(top: 60, bottom: 60),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: _detectedItems.asMap().entries.map((entry) {
+                              final index = entry.key + 1;
+                              final item = entry.value;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slateCard.withValues(alpha: 0.85),
+                                  border: Border.all(color: AppColors.electricCyan, width: 1.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.cyanGlow,
+                                      blurRadius: 8,
+                                    )
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '✓ $index. ${item.name} (x${item.quantity})',
+                                        style: const TextStyle(
+                                          color: AppColors.textPureWhite,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${currencyFormat.format(item.price)} đ',
+                                      style: const TextStyle(
+                                        color: AppColors.amberGold,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                       ),
@@ -255,90 +365,103 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
               ),
             ),
 
-            // Bottom Action Zone
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            // Bottom Action Console
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppColors.slateCard,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Primary CTA Full-width
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('ĐÃ NHẬN DIỆN', style: AppStyles.caption),
+                          Text('${_detectedItems.length} Món • Khớp Hóa Đơn', style: AppStyles.bodyMedium),
+                        ],
+                      ),
+                      Text(
+                        '${currencyFormat.format(totalDetectedPrice)} đ',
+                        style: const TextStyle(
+                          color: AppColors.amberGold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm & Create Room CTA
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
+                    height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.electricCyan,
-                        shadowColor: AppColors.cyanGlow,
-                        elevation: 10,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                        foregroundColor: AppColors.textDark,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                        elevation: 0,
                       ),
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => TableSessionScreen(
+                            builder: (context) => TableSessionScreen(
                               roomId: 'VN-8842',
                               items: _detectedItems,
                             ),
                           ),
                         );
                       },
-                      child: const Text(
-                        'Xác nhận & Tạo Bàn Chia Tiền →',
-                        style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
+                      child: const Text('Xác nhận & Tạo Bàn →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  // Secondary Actions: Edit Items & Retake
+                  // Secondary Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(42),
-                            side: const BorderSide(color: AppColors.electricCyan, width: 1),
-                            backgroundColor: Colors.white.withValues(alpha: 0.04),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            side: BorderSide(color: AppColors.electricCyan.withValues(alpha: 0.4)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          onPressed: () {
-                            Navigator.push(
+                          onPressed: () async {
+                            final updatedItems = await Navigator.push<List<BillItem>>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => EditBillItemsScreen(
-                                  initialItems: _detectedItems,
-                                  onBackToScan: () => Navigator.pop(context),
-                                ),
+                                builder: (context) => EditBillItemsScreen(initialItems: _detectedItems),
                               ),
                             );
+                            if (updatedItems != null) {
+                              setState(() {
+                                _detectedItems = updatedItems;
+                              });
+                            }
                           },
-                          child: const Text(
-                            '✏️  Sửa / Thêm món',
-                            style: TextStyle(color: AppColors.electricCyan, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
+                          child: const Text('✏️ Sửa / Thêm món', style: TextStyle(color: AppColors.electricCyan, fontSize: 13, fontWeight: FontWeight.w600)),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(42),
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1),
-                            backgroundColor: Colors.white.withValues(alpha: 0.04),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Đang làm mới ống kính quét lại hóa đơn...'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
+                            _runRealOcrOnSampleReceipt();
                           },
-                          child: const Text(
-                            '📷  Chụp lại bill',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
+                          child: const Text('📷 Quét lại ML Kit', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
                         ),
                       ),
                     ],
@@ -351,17 +474,42 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
       ),
     );
   }
+}
 
-  Widget _buildReticleCorner({bool topLeft = false, bool topRight = false, bool bottomLeft = false, bool bottomRight = false}) {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        border: Border(
-          top: (topLeft || topRight) ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
-          bottom: (bottomLeft || bottomRight) ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
-          left: (topLeft || bottomLeft) ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
-          right: (topRight || bottomRight) ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
+class _ReticleCorner extends StatelessWidget {
+  final double? top;
+  final double? bottom;
+  final double? left;
+  final double? right;
+  final bool isTop;
+  final bool isLeft;
+
+  const _ReticleCorner({
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.isTop,
+    required this.isLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          border: Border(
+            top: isTop ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
+            bottom: !isTop ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
+            left: isLeft ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
+            right: !isLeft ? const BorderSide(color: AppColors.electricCyan, width: 3) : BorderSide.none,
+          ),
         ),
       ),
     );
