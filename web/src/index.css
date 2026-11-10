@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+:root {
+  --bg-oled: #080A12;
+  --card-slate: #121726;
+  --cyan-brand: #00D9FF;
+  --amber-gold: #FAB22E;
+  --emerald-live: #21D487;
+  --ruby-alert: #FF4D4F;
+}
+
+body {
+  background-color: var(--bg-oled);
+  color: #FAFAFF;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
