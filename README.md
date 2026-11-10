@@ -264,6 +264,40 @@ flutter run
 
 ---
 
+### 4. 🌐 Production Deployment Guide
+
+SplitBill Zero is engineered for seamless, zero-cost cloud deployment:
+
+#### A. Guest Web PWA Deployment (Vercel)
+The web client is pre-configured with SPA fallback routing via `web/vercel.json`:
+1. Connect your repository to **[Vercel](https://vercel.com/)**.
+2. Select root directory: `web`.
+3. Set project name: `splitbill-zero` (yields `https://splitbill-zero.vercel.app`).
+4. Click **Deploy**.
+
+#### B. Backend Gateway Deployment (Render / Docker)
+The backend containerizes via a multi-stage Bun Alpine image (`server/Dockerfile`) and Blueprint spec (`render.yaml`):
+1. In **[Render Dashboard](https://dashboard.render.com/)**, click **New +** ➔ **Blueprint**.
+2. Select your `splitbill-zero` repository. Render automatically provisions the web service container in Singapore / Oregon with automated health checks (`GET /health`).
+3. Set optional environment variables `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the Render Environment tab if connecting a persistent Supabase database.
+
+#### C. Building the Production Android APK (Host App)
+Generate optimized release binaries with Proguard minification and native ABI splitting:
+```bash
+cd app
+
+# Build ultra-light ARM64 APK (~30MB):
+flutter build apk --release --split-per-abi \
+  --dart-define=WEB_BASE_URL="https://splitbill-zero.vercel.app" \
+  --dart-define=BACKEND_API_URL="https://splitbill-zero-server.onrender.com"
+
+# The output APK is generated at:
+# build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+```
+*Pre-compiled release APKs are also directly downloadable from [GitHub Releases](https://github.com/ducphan1311/splitbill-zero/releases).*
+
+---
+
 ## 🎨 Official UI/UX Design System (Figma)
 
 The complete production design file is hosted and maintained on Figma:
