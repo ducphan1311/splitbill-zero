@@ -1,5 +1,6 @@
 import type { TableRoomState, ClientMessage, ServerMessage } from '../shared/types';
 import { syncRoomToSupabase, fetchRoomFromSupabase } from './supabase';
+import { performReceiptOcr } from './ocrEngine';
 
 const PORT = Number(process.env.PORT) || 3088;
 
@@ -72,6 +73,33 @@ const server = Bun.serve<WebSocketData>({
       return new Response(JSON.stringify({ status: 'ok', activeRooms: rooms.size, timestamp: Date.now() }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
+    }
+
+    // OCR Ingestion Endpoint (Accepts multipart/form-data or binary image)
+    if (url.pathname === '/api/ocr' && req.method === 'POST') {
+      try {
+        const contentType = req.headers.get('content-type') || '';
+        let imageBuffer: Buffer;
+
+        if (contentType.includes('multipart/form-data')) {
+          const formData = await req.formData();
+          const file = formData.get('image') as File | null;
+          if (!file) throw new Error('No image file provided');
+          imageBuffer = Buffer.from(await file.arrayBuffer());
+        } else {
+          imageBuffer = Buffer.from(await req.arrayBuffer());
+        }
+
+        const items = await performReceiptOcr(imageBuffer);
+        return new Response(JSON.stringify({ success: true, count: items.length, items }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
     }
 
     // HTTP API: Create Room from Host App

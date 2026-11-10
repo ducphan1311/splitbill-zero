@@ -42,6 +42,9 @@ dependencies:
   share_plus: ^13.3.1
   http: ^1.6.0
   path_provider: ^2.1.6
+  camera_web: ^0.3.6
+  file_picker: ^13.3.3
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:
