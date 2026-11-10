@@ -5,7 +5,7 @@ services:
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
     plan: free
-    region: oregon
+    region: singapore
     envVars:
       - key: PORT
         value: 3088
