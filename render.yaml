@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: splitbill-zero-server
+    env: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: 3088
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

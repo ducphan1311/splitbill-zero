@@ -33,7 +33,8 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
     ];
   }
 
-  String get tableUrl => 'https://splitbill.zero/r/${widget.roomId}';
+  String get tableUrl =>
+      '${const String.fromEnvironment('WEB_BASE_URL', defaultValue: 'https://splitbill-zero.vercel.app')}/room/${widget.roomId}';
 
   void _copyLink() {
     Clipboard.setData(ClipboardData(text: tableUrl));

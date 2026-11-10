@@ -4,12 +4,17 @@ import 'package:http/http.dart' as http;
 import '../models/bill_item.dart';
 
 class BackendApiService {
-  // Local host URL when testing locally (supports iOS Simulator / Android Emulator / macOS / Web)
+  // Configurable Backend API URL (default to Render production or local dev)
   static String get baseUrl {
+    const envUrl = String.fromEnvironment('BACKEND_API_URL');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
     if (kIsWeb) {
       return 'http://127.0.0.1:3088';
     }
-    return 'http://localhost:3088';
+    // Default fallback when deployed on free cloud container
+    return 'https://splitbill-zero-server.onrender.com';
   }
 
   /// Send receipt image bytes to Backend OCR Engine (macOS Vision / Edge ML Kit)

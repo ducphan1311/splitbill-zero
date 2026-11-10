@@ -286,7 +286,7 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                       // Layer 1: Real Camera Preview, Uploaded Image, or Blank Viewfinder
                       if (_uploadedImageBytes != null)
                         Image.memory(_uploadedImageBytes!, fit: BoxFit.cover)
-                      else if (_cameraController != null && _cameraController!.value.isInitialized)
+                      else if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
                         CameraPreview(_cameraController!)
                       else
                         Image.asset(
