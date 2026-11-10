@@ -27,10 +27,21 @@
 
 ![SplitBill Zero UI/UX Showcase](docs/SplitBill_Zero_UI_Showcase.png)
 
-1. **Host Live Camera OCR:** Live bounding box detection over physical receipt. Geometric clustering pairs dish names with numeric VND prices.
-2. **Host Table Join QR:** Generates a real-time table room (e.g., `#VN-8842`). Guests join simply by scanning with native iPhone/Android Camera or Zalo.
-3. **Guest Collaborative Board:** Instant mobile web board (< 250KB bundle). Guests tap items to claim them or split shared dishes evenly.
-4. **Dynamic VietQR Settlement:** Generates a strictly-compliant EMVCo QR code encoded with the exact individual amount, host bank account, and unique reference note.
+1. **Host Live Camera OCR (Screen 01):** Real-time bounding box detection directly on physical restaurant receipts via Google ML Kit v2. Spatial geometric clustering pairs dish names with numeric prices and quantities `(x1)`.
+2. **Review & Edit Detected Items (Screen 01.B):** Complete host review interface to inspect item names, prices, increment/decrement quantities `[-] 1 [+]`, delete items, or add unbilled custom items (e.g., drinks, wet wipes) with automatic bill balance validation.
+3. **Host Table Presence & Join QR (Screen 02):** Generates an unblocked, high-resolution table QR code (e.g., `#VN-8842`) and quick actions (`🔗 Copy Link` & `📤 Share Table` via Zalo/SMS/AirDrop). Live presence indicators track who has joined and who is currently picking dishes.
+4. **Guest Collaborative Board (Screen 03):** Zero-install Web PWA (< 250KB bundle). Dining guests tap items to claim solo or split shared dishes evenly with real-time peer sync.
+5. **Dynamic VietQR Settlement (Screen 04):** Strictly-compliant EMVCo QR code encoded with individual amounts, host VPBank account (`0395828955`), and unique reference note (`NAM TRA TIEN LAU VN8842`), with 1-tap universal deep-linking into 40+ Vietnam banking apps (VPBank NEO, VCB, Techcombank, MBBank, MoMo).
+
+---
+
+## 🎨 Official Figma Design System
+
+The unified mobile flows, interaction states, and design system components are published on Figma:
+👉 **[Figma Design File: aimess-production](https://www.figma.com/design/o8mIiPoLyks3y0BV7fQ3sw/Untitled)**
+- **Full Flow in Vietnamese:** Screens `01`, `01.B`, `02`, `03`, `04`, `05`.
+- **Full Flow in English (Global Pitching/Ad Version):** Live Receipt OCR Scan, Review & Edit Items, Table Session, Guest PWA, Dynamic VietQR, Global Settlement Hub.
+- **Design System Board (`131:445`):** Complete design tokens, typography scale, 5 interactive card states, micro-interactions, PWA constraints, and Fair Split Math Matrix.
 
 ---
 
@@ -43,10 +54,12 @@ The system is architected into 4 decoupled, high-cohesion subsystems adhering to
 *Editable Draw.io source available at: [`docs/SplitBill_Zero_Architecture.drawio`](docs/SplitBill_Zero_Architecture.drawio) (Import into [app.diagrams.net](https://app.diagrams.net))*
 
 ### Subsystems Breakdown:
-- **Subsystem A (Client Interaction Layer):** Flutter 3.x Host Master Engine & Ultra-lightweight Guest PWA Web Client (< 250KB).
-- **Subsystem B (On-Device Ingestion & OCR Engine):** CameraX/AVFoundation streaming buffer, Google ML Kit v2 OCR, 2D Spatial Geometric Clustering ($|\Delta Y| \le 0.5 \times \text{LineHeight}$), and Tax/Surcharge Distributer.
-- **Subsystem C (Collaborative Session Mesh):** WebSocket / Supabase Realtime Gateway under topic `room:${roomId}`, in-memory ephemeral store with 2-hour TTL auto-eviction, and Fair-Split Math Matrix.
-- **Subsystem D (Banking & Settlement Gateway):** EMVCo QR Tag Synthesizer (NAPAS 247), CRC-16/CCITT-FALSE Checksum Engine (Poly `0x1021`), and Payment Event Reconciliation Listener.
+- **Subsystem A (Client Interaction Layer):** Flutter 3.x Host Master Engine (`app/`) & Ultra-lightweight Guest React 19 PWA Web Client (`web/`, bundle < 250KB).
+- **Subsystem B (On-Device Ingestion & OCR Engine):** CameraX/AVFoundation streaming buffer, Google ML Kit v2 OCR, 2D Spatial Geometric Clustering ($|\Delta Y| \le 0.6 \times \text{LineHeight}$), and Tax/Surcharge Distributer.
+- **Subsystem C (Collaborative Session Mesh - Dual Engine):** 
+  - **Supabase Realtime:** Built-in broadcast channel under topic `room:${roomId}` for instant distributed state propagation.
+  - **Bun Native WebSocket Gateway (`server/`):** Ultra-lightweight, high-throughput in-memory ephemeral mesh with 2-hour TTL auto-eviction.
+- **Subsystem D (Banking & Settlement Gateway):** EMVCo QR Tag Synthesizer (NAPAS 247), CRC-16/CCITT-FALSE Checksum Engine (Poly `0x1021`), and Universal Banking Deep Link Launcher (`web/src/utils/bankLauncher.ts`).
 
 ---
 

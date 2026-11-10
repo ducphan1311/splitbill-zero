@@ -6,72 +6,82 @@ html_content = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
-  body { background: #0F172A; color: #F8FAFC; width: 1920px; height: 1080px; padding: 36px 50px; display: flex; flex-direction: column; justify-content: space-between; }
+  body { background: #080A12; color: #FAFAFF; width: 2200px; height: 1100px; padding: 40px 60px; display: flex; flex-direction: column; justify-content: space-between; }
   
   /* Header */
-  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #334155; padding-bottom: 20px; }
-  .tag { font-size: 13px; font-weight: 700; color: #38BDF8; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-  .title { font-size: 32px; font-weight: 800; color: #FFFFFF; }
-  .title span { color: #38BDF8; }
-  .desc { font-size: 14px; color: #94A3B8; margin-top: 4px; }
-  .figma-badge { background: #1E293B; border: 1px solid #475569; padding: 8px 18px; border-radius: 100px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #F1F5F9; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #10B981; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
+  .tag { font-size: 13px; font-weight: 700; color: #00D9FF; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .title { font-size: 34px; font-weight: 800; color: #FAFAFF; letter-spacing: -0.5px; }
+  .title span { color: #00D9FF; }
+  .desc { font-size: 14.5px; color: #9EADC7; margin-top: 4px; }
+  .figma-badge { background: #121726; border: 1px solid rgba(0, 217, 255, 0.3); padding: 8px 18px; border-radius: 100px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #00D9FF; box-shadow: 0 0 15px rgba(0,217,255,0.15); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #21D487; box-shadow: 0 0 8px #21D487; }
 
-  /* Screens Gallery (4 Mobile Frames) */
-  .screens { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; flex: 1; margin: 24px 0; align-items: center; }
+  /* Screens Gallery (5 Mobile Frames in Sequence) */
+  .screens { display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px; flex: 1; margin: 28px 0; align-items: center; }
   
   .phone-wrap { display: flex; flex-direction: column; align-items: center; }
-  .phone-label { font-size: 14px; font-weight: 700; color: #E2E8F0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  .phone-step { width: 22px; height: 22px; border-radius: 50%; background: #38BDF8; color: #0F172A; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .phone-label { font-size: 13px; font-weight: 700; color: #E2E8F0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .phone-step { width: 22px; height: 22px; border-radius: 50%; background: #00D9FF; color: #080D14; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 
   /* Mobile Device Mockup */
-  .mockup { width: 340px; height: 680px; background: #000000; border: 3px solid #334155; border-radius: 44px; padding: 14px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); position: relative; overflow: hidden; display: flex; flex-direction: column; }
-  .mockup.host { border-color: #0284C7; box-shadow: 0 0 30px rgba(2, 132, 199, 0.25); }
-  .mockup.guest { border-color: #10B981; box-shadow: 0 0 30px rgba(16, 185, 129, 0.2); }
-  .mockup.settle { border-color: #F59E0B; box-shadow: 0 0 30px rgba(245, 158, 11, 0.2); }
+  .mockup { width: 370px; height: 720px; background: #000000; border: 3px solid #1E293B; border-radius: 46px; padding: 12px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .mockup.host { border-color: rgba(0, 217, 255, 0.4); box-shadow: 0 0 35px rgba(0, 217, 255, 0.2); }
+  .mockup.edit { border-color: rgba(0, 217, 255, 0.4); box-shadow: 0 0 35px rgba(0, 217, 255, 0.2); }
+  .mockup.presence { border-color: rgba(33, 212, 135, 0.4); box-shadow: 0 0 35px rgba(33, 212, 135, 0.2); }
+  .mockup.guest { border-color: rgba(0, 217, 255, 0.4); box-shadow: 0 0 35px rgba(0, 217, 255, 0.2); }
+  .mockup.settle { border-color: rgba(250, 178, 46, 0.4); box-shadow: 0 0 35px rgba(250, 178, 46, 0.2); }
 
-  .notch { width: 120px; height: 24px; background: #000000; border-radius: 0 0 16px 16px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 10; }
-  .screen-content { background: #0B0F19; border-radius: 32px; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; padding: 28px 16px 16px 16px; position: relative; }
+  .notch { width: 120px; height: 28px; background: #000000; border-radius: 0 0 18px 18px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 10; border: 1px solid rgba(255,255,255,0.08); border-top: none; }
+  .screen-content { background: #080A12; border-radius: 36px; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; padding: 32px 16px 16px 16px; position: relative; }
+
+  /* Common UI Elements */
+  .tag-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; width: fit-content; margin-bottom: 8px; }
+  .tag-pill.cyan { background: rgba(0,217,255,0.12); color: #00D9FF; border: 1px solid rgba(0,217,255,0.3); }
+  .tag-pill.emerald { background: rgba(33,212,135,0.12); color: #21D487; border: 1px solid rgba(33,212,135,0.3); }
+  
+  .s-title { font-size: 15px; font-weight: 700; color: #FAFAFF; }
+  .s-sub { font-size: 11px; color: #9EADC7; margin-top: 2px; }
 
   /* Screen 1: Camera Scanner */
-  .camera-view { background: #1E293B; border-radius: 20px; flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #475569; }
-  .receipt-paper { background: #F8FAFC; color: #0F172A; width: 220px; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); }
-  .box-overlay { border: 2px solid #38BDF8; background: rgba(56, 189, 248, 0.25); border-radius: 4px; padding: 2px 4px; margin: 3px 0; font-weight: bold; }
-  .scan-btn { background: #0284C7; color: #fff; font-size: 13px; font-weight: 700; padding: 12px; border-radius: 12px; text-align: center; margin-top: 14px; }
+  .camera-view { background: #0A1F40; border-radius: 20px; flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1.5px solid rgba(0,217,255,0.4); margin: 10px 0; }
+  .reticle { position: absolute; width: 16px; height: 16px; border: 2.5px solid #00D9FF; }
+  .ret-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+  .ret-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+  .ret-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+  .ret-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+  .bbox-row { background: rgba(10, 31, 64, 0.85); border: 1px solid #00D9FF; border-radius: 8px; padding: 6px 10px; margin: 4px 14px; width: 90%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; box-shadow: 0 0 10px rgba(0,217,255,0.2); }
+  .btn-cyan { background: #00D9FF; color: #080D14; font-size: 12px; font-weight: 700; padding: 12px; border-radius: 25px; text-align: center; box-shadow: 0 0 15px rgba(0,217,255,0.4); }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-outline { flex: 1; border: 1px solid rgba(0,217,255,0.3); background: rgba(255,255,255,0.04); color: #00D9FF; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 12px; text-align: center; }
 
-  /* Screen 2: Host Table QR */
-  .qr-box { background: #FFFFFF; padding: 16px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; margin: 20px auto; width: 180px; height: 180px; justify-content: center; }
-  .qr-pattern { width: 140px; height: 140px; background: repeating-linear-gradient(45deg, #0F172A, #0F172A 8px, #FFFFFF 8px, #FFFFFF 16px); border-radius: 8px; }
-  .room-pill { background: #1E293B; border: 1px solid #334155; padding: 8px 14px; border-radius: 100px; text-align: center; font-size: 13px; font-weight: 700; color: #38BDF8; margin-top: 10px; }
-  .avatar-row { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
-  .avt { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #fff; }
-  .avt-1 { background: #EF4444; }
-  .avt-2 { background: #10B981; }
-  .avt-3 { background: #F59E0B; }
-  .avt-add { background: #334155; border: 1px dashed #64748B; color: #94A3B8; }
+  /* Screen 2: Edit Items */
+  .edit-list { flex: 1; display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .edit-item { background: #121726; border: 1px solid rgba(0,217,255,0.25); border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .qty-ctrl { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); padding: 3px 8px; border-radius: 8px; font-size: 11px; color: #00D9FF; font-weight: bold; }
+  .btn-add { border: 1px dashed rgba(0,217,255,0.4); background: rgba(0,217,255,0.06); color: #00D9FF; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 12px; text-align: center; }
+  .sum-bar { background: #0E1322; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
 
-  /* Screen 3: Guest Collaborative Board */
-  .dish-item { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-  .dish-item.selected { border-color: #10B981; background: rgba(16, 185, 129, 0.12); }
-  .dish-title { font-size: 12px; font-weight: 600; color: #F1F5F9; }
-  .dish-price { font-size: 11px; color: #94A3B8; }
-  .claim-tag { font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
-  .tag-my { background: #10B981; color: #fff; }
-  .tag-shared { background: #6366F1; color: #fff; }
+  /* Screen 3: Host Table QR & Presence */
+  .qr-frame { background: #121726; border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; align-items: center; margin: 10px 0; }
+  .qr-inner { background: #FFFFFF; padding: 10px; border-radius: 14px; border: 1.5px solid rgba(33,212,135,0.6); }
+  .qr-pattern { width: 110px; height: 110px; background: repeating-linear-gradient(45deg, #080A12, #080A12 6px, #FFFFFF 6px, #FFFFFF 12px); border-radius: 6px; }
+  .guest-row { background: #121726; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 
-  /* Screen 4: Dynamic VietQR Pay */
-  .pay-card { background: #1E293B; border: 1px solid #F59E0B; border-radius: 16px; padding: 14px; text-align: center; }
-  .pay-amount { font-size: 24px; font-weight: 800; color: #FBBF24; margin: 6px 0; }
-  .pay-note { font-size: 11px; color: #94A3B8; background: #0F172A; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-bottom: 12px; }
-  .vietqr-box { background: #fff; border-radius: 12px; padding: 12px; width: 160px; height: 160px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .napas-logo { font-size: 10px; font-weight: 900; color: #0284C7; letter-spacing: 1px; margin-bottom: 4px; }
-  .vietqr-code { width: 120px; height: 120px; background: repeating-linear-gradient(90deg, #0F172A, #0F172A 6px, #FFFFFF 6px, #FFFFFF 12px); border-radius: 4px; }
-  .bank-open-btn { background: #F59E0B; color: #0F172A; font-weight: 700; font-size: 12.5px; padding: 12px; border-radius: 12px; text-align: center; margin-top: 12px; }
+  /* Screen 4: Guest Collaborative Board */
+  .dish-card { background: #121726; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .dish-card.active { border-color: #00D9FF; box-shadow: 0 0 15px rgba(0,217,255,0.15); }
+  .split-badge { font-size: 9px; font-weight: bold; background: rgba(250,178,46,0.15); border: 1px solid rgba(250,178,46,0.4); color: #FAB22E; padding: 2px 6px; border-radius: 4px; }
 
-  /* Footer Specs */
-  .footer-specs { background: #111827; border: 1px solid #1E293B; border-radius: 14px; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; }
-  .spec-item { display: flex; align-items: center; gap: 12px; }
-  .spec-label { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+  /* Screen 5: Dynamic VietQR Pay */
+  .pay-surface { background: #121726; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 14px; text-align: center; margin: 10px 0; flex: 1; display: flex; flex-direction: column; justify-content: space-around; }
+  .gold-val { font-size: 24px; font-weight: 800; color: #FAB22E; }
+  .memo-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px 10px; font-size: 11px; font-family: monospace; color: #00D9FF; }
+
+  /* Specs Footer */
+  .footer-specs { background: #121726; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px 36px; display: flex; justify-content: space-between; align-items: center; }
+  .spec-item { display: flex; flex-direction: column; gap: 4px; }
+  .spec-label { font-size: 11px; color: #66738C; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
   .spec-val { font-size: 13.5px; font-weight: 700; color: #E2E8F0; }
 </style>
 </head>
@@ -80,140 +90,167 @@ html_content = """<!DOCTYPE html>
   <!-- Header -->
   <div class="header">
     <div>
-      <div class="tag">UI/UX Design Specification & Visual Teardown</div>
-      <div class="title">⚡ SplitBill Zero: <span>Design System & User Flows</span></div>
-      <div class="desc">Engineered for sub-60-second table settlement with zero app installation for dining guests</div>
+      <div class="tag">⚡ Unified Mobile Flow &amp; Fintech Architecture</div>
+      <div class="title">SplitBill Zero: <span>Production 5-Screen Experience</span></div>
+      <div class="desc">Host On-Device OCR Scanner ➔ Review &amp; Edit ➔ Realtime Table Presence ➔ Guest Web PWA ➔ Dynamic VietQR Settlement</div>
     </div>
     <div class="figma-badge">
       <div class="dot"></div>
-      Figma Design System • Production Ready
+      Figma Design System • OLED Cyan Edition
     </div>
   </div>
 
-  <!-- 4 Mockups Showcase -->
+  <!-- 5 Mockups Showcase -->
   <div class="screens">
 
-    <!-- Screen 1 -->
+    <!-- Screen 1: OCR -->
     <div class="phone-wrap">
       <div class="phone-label"><div class="phone-step">1</div> Host Live Camera OCR</div>
       <div class="mockup host">
         <div class="notch"></div>
         <div class="screen-content">
-          <div style="font-size: 12px; font-weight: 700; color: #38BDF8; margin-bottom: 8px;">SCANNING RECEIPT...</div>
+          <div class="tag-pill cyan">⚡ ML KIT v2 • &lt; 45MS LATENCY</div>
+          <div class="s-title">Quét Hóa Đơn Trực Tiếp</div>
+          <div class="s-sub">AI nhận diện tọa độ món &amp; đơn giá</div>
+
           <div class="camera-view">
-            <div class="receipt-paper">
-              <div>*** BILL THANH TOAN ***</div>
-              <div class="box-overlay">1. Lau Bo Ba Chi &nbsp;&nbsp;&nbsp;&nbsp; 350,000</div>
-              <div class="box-overlay">2. Tra Dao Cam Sa &nbsp;&nbsp;&nbsp;&nbsp; 45,000</div>
-              <div class="box-overlay">3. Ca Phe Muoi &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 35,000</div>
-              <div class="box-overlay">4. Nuoc Suoi &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 15,000</div>
-              <div style="border-top: 1px dashed #64748B; margin-top: 6px; padding-top: 4px;">VAT 8%: 35,600</div>
-              <div><b>TONG CONG: 480,600</b></div>
-            </div>
+            <div class="reticle ret-tl"></div><div class="reticle ret-tr"></div>
+            <div class="reticle ret-bl"></div><div class="reticle ret-br"></div>
+            <div class="bbox-row"><span>✓ 1. Lẩu Bò Ba Chỉ (x1)</span><span style="color:#FAB22E">350.000 đ</span></div>
+            <div class="bbox-row"><span>✓ 2. Trà Đào Cam Sả (x1)</span><span style="color:#FAB22E">45.000 đ</span></div>
+            <div class="bbox-row"><span>✓ 3. Cà Phê Muối (x1)</span><span style="color:#FAB22E">35.000 đ</span></div>
+            <div class="bbox-row"><span>✓ 4. Nước Suối (x1)</span><span style="color:#FAB22E">15.000 đ</span></div>
           </div>
-          <div class="scan-btn">⚡ Tách món &amp; Mở bàn</div>
+
+          <div class="btn-cyan">Xác nhận &amp; Tạo Bàn →</div>
+          <div class="btn-row">
+            <div class="btn-outline">✏️ Sửa / Thêm món</div>
+            <div class="btn-outline" style="color:#9EADC7; border-color:rgba(255,255,255,0.15)">📷 Chụp lại bill</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Screen 2 -->
+    <!-- Screen 2: Edit Items -->
     <div class="phone-wrap">
-      <div class="phone-label"><div class="phone-step">2</div> Host Table Join QR</div>
-      <div class="mockup host">
+      <div class="phone-label"><div class="phone-step">2</div> Review &amp; Edit Items</div>
+      <div class="mockup edit">
         <div class="notch"></div>
         <div class="screen-content">
-          <div style="font-size: 14px; font-weight: 700; color: #F8FAFC; text-align: center;">Mời bàn quét tham gia</div>
-          <div style="font-size: 11px; color: #94A3B8; text-align: center; margin-top: 2px;">Không cần tải app • Quét bằng Camera / Zalo</div>
-          
-          <div class="qr-box">
-            <div class="qr-pattern"></div>
+          <div class="tag-pill cyan">✏️ CHỈNH SỬA &amp; KIỂM TRA MÓN</div>
+          <div class="s-title">Chi Tiết Món Sau Quét AI</div>
+          <div class="s-sub">Chạm để sửa tên, giá hoặc thêm món</div>
+
+          <div class="edit-list">
+            <div class="edit-item">
+              <div><div style="font-size:12px;font-weight:600">1. Lẩu Bò Ba Chỉ</div><div style="color:#FAB22E;font-size:11px;font-weight:bold">350.000 đ</div></div>
+              <div class="qty-ctrl">- 1 +</div>
+            </div>
+            <div class="edit-item">
+              <div><div style="font-size:12px;font-weight:600">2. Trà Đào Cam Sả</div><div style="color:#FAB22E;font-size:11px;font-weight:bold">45.000 đ</div></div>
+              <div class="qty-ctrl">- 1 +</div>
+            </div>
+            <div class="edit-item">
+              <div><div style="font-size:12px;font-weight:600">3. Cà Phê Muối</div><div style="color:#FAB22E;font-size:11px;font-weight:bold">35.000 đ</div></div>
+              <div class="qty-ctrl">- 1 +</div>
+            </div>
+            <div class="btn-add">+ Thêm món ngoài hóa đơn</div>
           </div>
 
-          <div class="room-pill">BÀN ĂN: #VN-8842</div>
-
-          <div style="font-size: 11.5px; color: #94A3B8; text-align: center; margin-top: 16px;">Đã vào bàn (3/4 người):</div>
-          <div class="avatar-row">
-            <div class="avt avt-1">Đức</div>
-            <div class="avt avt-2">Nam</div>
-            <div class="avt avt-3">Linh</div>
-            <div class="avt avt-add">+</div>
+          <div class="sum-bar">
+            <span>Tổng: <b style="color:#21D487">✓ Khớp bill gốc</b></span>
+            <span style="color:#FAB22E;font-size:13px;font-weight:bold">445.000 đ</span>
           </div>
-
-          <div class="scan-btn" style="background: #10B981; margin-top: auto;">Bắt đầu nhận món ➔</div>
+          <div class="btn-cyan" style="margin-top:10px">Lưu Món &amp; Tạo Bàn →</div>
         </div>
       </div>
     </div>
 
-    <!-- Screen 3 -->
+    <!-- Screen 3: Host QR & Presence -->
     <div class="phone-wrap">
-      <div class="phone-label"><div class="phone-step">3</div> Guest Collaborative Board</div>
+      <div class="phone-label"><div class="phone-step">3</div> Host Table Presence</div>
+      <div class="mockup presence">
+        <div class="notch"></div>
+        <div class="screen-content">
+          <div class="tag-pill emerald">● LIVE TABLE #VN-8842</div>
+          <div class="s-title">Mời Bạn Bè Vào Bàn</div>
+          <div class="s-sub">Không cần tải app • Quét Camera/Zalo</div>
+
+          <div class="qr-frame">
+            <div class="qr-inner"><div class="qr-pattern"></div></div>
+            <div class="btn-row" style="width:100%; margin-top:10px">
+              <div class="btn-outline" style="font-size:10px">🔗 Sao chép link</div>
+              <div class="btn-outline" style="color:#21D487; border-color:rgba(33,212,135,0.3); font-size:10px">📤 Chia sẻ bàn</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px; color:#66738C; font-weight:700; margin-bottom:4px">THÀNH VIÊN (3 ONLINE)</div>
+          <div class="guest-row"><span>Phan Minh Đức 👑</span><span style="color:#FAB22E; font-size:10px">HOST</span></div>
+          <div class="guest-row"><span>Trần Hải Nam</span><span style="color:#00D9FF; font-size:10px">CHỌN...</span></div>
+          <div class="guest-row"><span>Nguyễn Thùy Linh</span><span style="color:#00D9FF; font-size:10px">CHỌN...</span></div>
+
+          <div class="btn-cyan" style="margin-top:auto">Khóa Bàn &amp; Chia Tiền →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 4: Guest PWA -->
+    <div class="phone-wrap">
+      <div class="phone-label"><div class="phone-step">4</div> Guest Collaborative PWA</div>
       <div class="mockup guest">
         <div class="notch"></div>
         <div class="screen-content">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #10B981;">Chào Nam 👋</div>
-              <div style="font-size: 10.5px; color: #94A3B8;">Chạm vào món bạn đã ăn</div>
+          <div class="tag-pill cyan">GUEST PWA • NO LOGIN</div>
+          <div class="s-title">Chọn Món Bạn Đã Dùng</div>
+          <div class="s-sub">Chạm nhận món • Giữ để chia chung</div>
+
+          <div style="flex:1; margin:10px 0">
+            <div class="dish-card active">
+              <div><div style="font-size:12px;font-weight:600">Trà Đào Cam Sả</div><div style="color:#9EADC7;font-size:10px">Của bạn</div></div>
+              <span style="color:#FAB22E;font-size:12px;font-weight:bold">45.000 đ</span>
             </div>
-            <div style="background: rgba(16, 185, 129, 0.15); color: #34D399; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px;">Web Client</div>
+            <div class="dish-card active">
+              <div><div style="font-size:12px;font-weight:600">Lẩu Bò Ba Chỉ</div><div style="color:#9EADC7;font-size:10px">Chia đều 3 người</div></div>
+              <span class="split-badge">CHIA 3</span>
+            </div>
+            <div class="dish-card">
+              <div><div style="font-size:12px;font-weight:600">Cà Phê Muối</div><div style="color:#9EADC7;font-size:10px">Đức đã nhận</div></div>
+              <span style="color:#FAB22E;font-size:12px;font-weight:bold">35.000 đ</span>
+            </div>
           </div>
 
-          <div class="dish-item selected">
-            <div>
-              <div class="dish-title">Trà Đào Cam Sả</div>
-              <div class="dish-price">45,000 đ</div>
-            </div>
-            <div class="claim-tag tag-my">Của Nam</div>
+          <div class="sum-bar" style="margin-bottom:10px">
+            <span>Phần bạn cần trả:</span>
+            <span style="color:#FAB22E;font-size:14px;font-weight:bold">161.600 đ</span>
           </div>
-
-          <div class="dish-item selected">
-            <div>
-              <div class="dish-title">Lẩu Bò Ba Chỉ</div>
-              <div class="dish-price">350,000 đ (Ăn chung)</div>
-            </div>
-            <div class="claim-tag tag-shared">Chia 3 người</div>
-          </div>
-
-          <div class="dish-item">
-            <div>
-              <div class="dish-title">Cà Phê Muối</div>
-              <div class="dish-price">35,000 đ</div>
-            </div>
-            <div style="font-size: 10px; color: #EF4444; font-weight: 600;">Linh đã chọn</div>
-          </div>
-
-          <div class="dish-item">
-            <div>
-              <div class="dish-title">Nước Suối Lavie</div>
-              <div class="dish-price">15,000 đ</div>
-            </div>
-            <div style="font-size: 10px; color: #64748B;">Chưa ai nhận</div>
-          </div>
-
-          <div class="scan-btn" style="background: #10B981; margin-top: auto;">Xác nhận (161,600 đ) ➔</div>
+          <div class="btn-cyan">Xác Nhận &amp; Thanh Toán →</div>
         </div>
       </div>
     </div>
 
-    <!-- Screen 4 -->
+    <!-- Screen 5: Dynamic VietQR -->
     <div class="phone-wrap">
-      <div class="phone-label"><div class="phone-step">4</div> Dynamic VietQR Pay</div>
+      <div class="phone-label"><div class="phone-step">5</div> Dynamic VietQR Pay</div>
       <div class="mockup settle">
         <div class="notch"></div>
         <div class="screen-content">
-          <div class="pay-card">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Số tiền Nam cần trả:</div>
-            <div class="pay-amount">161,600 đ</div>
-            <div class="pay-note">Nội dung: <b>NAM TRA TIEN LAU</b></div>
+          <div class="tag-pill emerald">NAPAS 24/7 • EMVCO VIETQR</div>
+          <div class="s-title">Thanh Toán Chuyển Khoản</div>
+          <div class="s-sub">Tự động điền STK, tiền &amp; nội dung</div>
 
-            <div class="vietqr-box">
-              <div class="napas-logo">VIETQR • NAPAS 247</div>
-              <div class="vietqr-code"></div>
+          <div class="pay-surface">
+            <div style="font-size:11px;color:#9EADC7">CHỦ BÀN: <b>PHAN MINH ĐỨC (VPBANK)</b></div>
+            <div class="gold-val">161.600 đ</div>
+
+            <div style="background:#fff;border-radius:14px;padding:10px;width:130px;margin:0 auto;border:2px solid #00D9FF;box-shadow:0 0 15px rgba(0,217,255,0.25)">
+              <div class="qr-pattern" style="width:106px;height:106px"></div>
             </div>
+
+            <div class="memo-box">NAM TRA TIEN LAU VN8842</div>
           </div>
 
-          <div class="bank-open-btn">🏦 Mở App Ngân hàng thanh toán</div>
-          <div style="font-size: 10.5px; color: #64748B; text-align: center; margin-top: 8px;">Tự động điền STK, Số tiền &amp; Lời nhắn</div>
+          <div class="btn-cyan" style="margin-top:auto">🏦 Mở App Ngân Hàng →</div>
+          <div style="font-size:10px;color:#66738C;text-align:center;margin-top:6px">Hỗ trợ VCB, Techcombank, VPBank, MB...</div>
         </div>
       </div>
     </div>
@@ -223,28 +260,20 @@ html_content = """<!DOCTYPE html>
   <!-- Specs Footer -->
   <div class="footer-specs">
     <div class="spec-item">
-      <div>
-        <div class="spec-label">Mobile Host Stack</div>
-        <div class="spec-val">Flutter 3.x • Google ML Kit v2 • CameraX</div>
-      </div>
+      <div class="spec-label">Mobile Host Engine</div>
+      <div class="spec-val">Flutter 3.x • Google ML Kit v2 • CameraX Buffer</div>
     </div>
     <div class="spec-item">
-      <div>
-        <div class="spec-label">Guest Web Client</div>
-        <div class="spec-val">Svelte / PWA • &lt; 250KB • Zero Login</div>
-      </div>
+      <div class="spec-label">Guest Web PWA</div>
+      <div class="spec-val">React 19 + Vite + Tailwind v4 • &lt; 250KB • Zero Install</div>
     </div>
     <div class="spec-item">
-      <div>
-        <div class="spec-label">Real-time Mesh</div>
-        <div class="spec-val">Supabase Realtime • Latency &lt; 80ms</div>
-      </div>
+      <div class="spec-label">Realtime Mesh Dual-Engine</div>
+      <div class="spec-val">Supabase Realtime &amp; Bun WebSocket Gateway (&lt; 30ms)</div>
     </div>
     <div class="spec-item">
-      <div>
-        <div class="spec-label">Fintech Engine</div>
-        <div class="spec-val">EMVCo QR Tag Standard • CRC-16 Checksum</div>
-      </div>
+      <div class="spec-label">Fintech Settlement</div>
+      <div class="spec-val">EMVCo TLV VietQR • CRC-16/CCITT • Universal Deep-Link</div>
     </div>
   </div>
 
@@ -262,9 +291,9 @@ cmd = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "--headless",
     "--disable-gpu",
-    "--window-size=1920,1080",
+    "--window-size=2200,1100",
     f"--screenshot={img_path}",
     html_path
 ]
 subprocess.run(cmd, check=True)
-print("Rendered SplitBill_Zero_UI_Showcase.png successfully!")
+print("Updated and re-rendered SplitBill_Zero_UI_Showcase.png with 5 modern screens!")
