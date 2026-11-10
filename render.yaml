@@ -1,11 +1,11 @@
 services:
   - type: web
     name: splitbill-zero-server
-    env: docker
+    runtime: docker
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
     plan: free
-    region: singapore
+    region: oregon
     envVars:
       - key: PORT
         value: 3088
