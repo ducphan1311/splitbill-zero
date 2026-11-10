@@ -38,7 +38,11 @@ export function App() {
 
   // Connect to Bun WebSocket Mesh Gateway
   useEffect(() => {
-    const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:3088/ws' : `wss://${window.location.host}/ws`;
+    // Default to hosted server on Render if not running on local machine
+    const defaultWsUrl = 'wss://splitbill-zero-server.onrender.com/ws';
+    const wsUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'ws://localhost:3088/ws'
+      : (import.meta.env.VITE_WS_URL || defaultWsUrl);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
