@@ -1,6 +1,7 @@
 import type { TableRoomState, ClientMessage, ServerMessage } from '../shared/types';
+import { syncRoomToSupabase, fetchRoomFromSupabase } from './supabase';
 
-const PORT = process.env.PORT || 3088;
+const PORT = Number(process.env.PORT) || 3088;
 
 // In-memory Ephemeral Room Store with 2-hour TTL auto-cleanup
 const rooms = new Map<string, TableRoomState>();
@@ -52,20 +53,81 @@ interface WebSocketData {
 
 const server = Bun.serve<WebSocketData>({
   port: PORT,
-  fetch(req, server) {
+  async fetch(req, server) {
     const url = new URL(req.url);
+
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      });
+    }
 
     // Health check endpoint
     if (url.pathname === '/health') {
-      return new Response(JSON.stringify({ status: 'ok', activeRooms: rooms.size }), {
-        headers: { 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ status: 'ok', activeRooms: rooms.size, timestamp: Date.now() }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
+    }
+
+    // HTTP API: Create Room from Host App
+    if (url.pathname === '/api/rooms' && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        const roomId = (body.roomId || `VN-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
+        
+        const newRoom: TableRoomState = {
+          roomId,
+          hostName: body.hostName || 'Chủ Bàn',
+          hostBankBin: body.hostBankBin || '970432',
+          hostAccountNumber: body.hostAccountNumber || '0395828955',
+          items: body.items || [],
+          guests: {
+            'host': {
+              guestId: 'host',
+              guestName: body.hostName || 'Chủ Bàn',
+              isHost: true,
+              claimedItemIds: [],
+              isPaid: true,
+            }
+          },
+          status: 'OPEN',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        rooms.set(roomId, newRoom);
+        await syncRoomToSupabase(newRoom);
+
+        return new Response(JSON.stringify({ success: true, room: newRoom }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
     }
 
     // HTTP Room state snapshot endpoint
     if (url.pathname.startsWith('/api/rooms/')) {
       const roomId = url.pathname.split('/').pop()?.toUpperCase() || '';
-      const room = rooms.get(roomId);
+      let room = rooms.get(roomId);
+      
+      // Fallback: check Supabase DB if not in memory
+      if (!room) {
+        const dbRoom = await fetchRoomFromSupabase(roomId);
+        if (dbRoom) {
+          room = dbRoom;
+          rooms.set(roomId, room);
+        }
+      }
+
       if (!room) {
         return new Response(JSON.stringify({ error: 'Room not found' }), {
           status: 404,
@@ -86,7 +148,7 @@ const server = Bun.serve<WebSocketData>({
       return new Response('WebSocket upgrade failed', { status: 400 });
     }
 
-    return new Response('⚡ SplitBill Zero Realtime Mesh Server', { status: 200 });
+    return new Response('⚡ SplitBill Zero Backend Gateway (API + Realtime Mesh)', { status: 200 });
   },
 
   websocket: {
@@ -94,7 +156,7 @@ const server = Bun.serve<WebSocketData>({
       // Connection established
     },
 
-    message(ws, rawMessage) {
+    async message(ws, rawMessage) {
       try {
         const msg = JSON.parse(rawMessage.toString()) as ClientMessage;
 
@@ -108,6 +170,11 @@ const server = Bun.serve<WebSocketData>({
 
           let room = rooms.get(roomId);
           if (!room) {
+            const dbRoom = await fetchRoomFromSupabase(roomId);
+            if (dbRoom) room = dbRoom;
+          }
+
+          if (!room) {
             room = {
               roomId,
               hostName: msg.guestName,
@@ -119,29 +186,29 @@ const server = Bun.serve<WebSocketData>({
               createdAt: Date.now(),
               updatedAt: Date.now(),
             };
-            rooms.set(roomId, room);
           }
 
+          // Register or update guest presence
           if (!room.guests[msg.guestId]) {
             room.guests[msg.guestId] = {
               guestId: msg.guestId,
               guestName: msg.guestName,
-              isHost: msg.isHost ?? false,
+              isHost: msg.isHost || false,
               claimedItemIds: [],
-              isPaid: false,
+              isPaid: msg.isHost || false,
             };
           }
           room.updatedAt = Date.now();
+          rooms.set(roomId, room);
 
           // Broadcast updated room state to all clients in this room
-          server.publish(
-            `room:${roomId}`,
-            JSON.stringify({ type: 'ROOM_STATE', state: room } satisfies ServerMessage)
-          );
-          return;
-        }
+          const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
+          server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+          ws.send(JSON.stringify(stateMsg));
 
-        if (msg.type === 'CLAIM_ITEM') {
+          // Sync to Supabase in background
+          syncRoomToSupabase(room);
+        } else if (msg.type === 'CLAIM_ITEM') {
           const roomId = msg.roomId.toUpperCase();
           const room = rooms.get(roomId);
           if (!room) return;
@@ -149,56 +216,58 @@ const server = Bun.serve<WebSocketData>({
           const guest = room.guests[msg.guestId];
           if (!guest) return;
 
-          const hasClaimed = guest.claimedItemIds.includes(msg.itemId);
           if (msg.action === 'TOGGLE') {
-            if (hasClaimed) {
+            if (guest.claimedItemIds.includes(msg.itemId)) {
               guest.claimedItemIds = guest.claimedItemIds.filter((id) => id !== msg.itemId);
             } else {
               guest.claimedItemIds.push(msg.itemId);
             }
-          } else if (msg.action === 'CLAIM' && !hasClaimed) {
-            guest.claimedItemIds.push(msg.itemId);
-          } else if (msg.action === 'UNCLAIM' && hasClaimed) {
+          } else if (msg.action === 'CLAIM') {
+            if (!guest.claimedItemIds.includes(msg.itemId)) {
+              guest.claimedItemIds.push(msg.itemId);
+            }
+          } else if (msg.action === 'UNCLAIM') {
             guest.claimedItemIds = guest.claimedItemIds.filter((id) => id !== msg.itemId);
           }
 
           room.updatedAt = Date.now();
-          server.publish(
-            `room:${roomId}`,
-            JSON.stringify({ type: 'ROOM_STATE', state: room } satisfies ServerMessage)
-          );
-          return;
-        }
+          rooms.set(roomId, room);
 
-        if (msg.type === 'LOCK_ROOM') {
+          const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
+          server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+
+          // Sync to Supabase in background
+          syncRoomToSupabase(room);
+        } else if (msg.type === 'LOCK_ROOM') {
           const roomId = msg.roomId.toUpperCase();
           const room = rooms.get(roomId);
           if (!room) return;
 
           room.status = 'LOCKED';
           room.updatedAt = Date.now();
-          server.publish(
-            `room:${roomId}`,
-            JSON.stringify({ type: 'ROOM_STATE', state: room } satisfies ServerMessage)
-          );
-          return;
-        }
+          rooms.set(roomId, room);
 
-        if (msg.type === 'MARK_PAID') {
+          const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
+          server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+          syncRoomToSupabase(room);
+        } else if (msg.type === 'MARK_PAID') {
           const roomId = msg.roomId.toUpperCase();
           const room = rooms.get(roomId);
-          if (!room || !room.guests[msg.guestId]) return;
+          if (!room) return;
 
-          room.guests[msg.guestId].isPaid = true;
-          room.updatedAt = Date.now();
-          server.publish(
-            `room:${roomId}`,
-            JSON.stringify({ type: 'ROOM_STATE', state: room } satisfies ServerMessage)
-          );
-          return;
+          const guest = room.guests[msg.guestId];
+          if (guest) {
+            guest.isPaid = true;
+            room.updatedAt = Date.now();
+            rooms.set(roomId, room);
+
+            const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
+            server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+            syncRoomToSupabase(room);
+          }
         }
-      } catch (err) {
-        ws.send(JSON.stringify({ type: 'ERROR', message: String(err) }));
+      } catch (err: any) {
+        ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
       }
     },
 
@@ -210,4 +279,4 @@ const server = Bun.serve<WebSocketData>({
   },
 });
 
-console.log(`⚡ SplitBill Zero Realtime Mesh running on ws://localhost:${server.port}`);
+console.log(`⚡ SplitBill Zero Backend Gateway running on http://localhost:${PORT} and ws://localhost:${PORT}/ws`);

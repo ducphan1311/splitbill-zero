@@ -54,11 +54,11 @@ The system is architected into 4 decoupled, high-cohesion subsystems adhering to
 *Editable Draw.io source available at: [`docs/SplitBill_Zero_Architecture.drawio`](docs/SplitBill_Zero_Architecture.drawio) (Import into [app.diagrams.net](https://app.diagrams.net))*
 
 ### Subsystems Breakdown:
-- **Subsystem A (Client Interaction Layer):** Flutter 3.x Host Master Engine (`app/`) & Ultra-lightweight Guest React 19 PWA Web Client (`web/`, bundle < 250KB).
+- **Subsystem A (Client Interaction Layer):** Flutter 3.x Host Master Engine (`app/`) & Ultra-lightweight Guest React 19 PWA Web Client (`web/`, bundle < 250KB). Flutter app communicates purely via REST API and WebSockets with Backend Gateway; no direct cloud SDK or keys in the client.
 - **Subsystem B (On-Device Ingestion & OCR Engine):** CameraX/AVFoundation streaming buffer, Google ML Kit v2 OCR, 2D Spatial Geometric Clustering ($|\Delta Y| \le 0.6 \times \text{LineHeight}$), and Tax/Surcharge Distributer.
-- **Subsystem C (Collaborative Session Mesh - Dual Engine):** 
-  - **Supabase Realtime:** Built-in broadcast channel under topic `room:${roomId}` for instant distributed state propagation.
-  - **Bun Native WebSocket Gateway (`server/`):** Ultra-lightweight, high-throughput in-memory ephemeral mesh with 2-hour TTL auto-eviction.
+- **Subsystem C (Collaborative Session Mesh & Backend Gateway):** 
+  - **Bun Native Backend Gateway (`server/`):** REST API endpoints (`/api/rooms`) + High-speed WebSocket pub/sub topic `room:${roomId}` with 2-hour TTL auto-eviction.
+  - **Backend Supabase Integration:** Supabase PostgreSQL and Realtime broadcast integrated strictly at the Backend level (`server/supabase.ts`). Credentials (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) are managed via `.env` on local environments, never exposed in client bundles or committed to Git.
 - **Subsystem D (Banking & Settlement Gateway):** EMVCo QR Tag Synthesizer (NAPAS 247), CRC-16/CCITT-FALSE Checksum Engine (Poly `0x1021`), and Universal Banking Deep Link Launcher (`web/src/utils/bankLauncher.ts`).
 
 ---
