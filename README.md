@@ -177,18 +177,18 @@ $$\text{Horizontal Alignment Check:} \quad X_{\text{price}} > X_{\text{item}} \q
 ```tree
 splitbill-zero/
 ├── apps/
-│   ├── mobile-host/            # Flutter Mobile App for Table Host (OCR & Camera)
-│   └── guest-web/              # Lightweight Mobile Web App for Dining Guests
-├── packages/
-│   ├── ocr-parser/             # Spatial bounding-box regex & dish matching algorithms
-│   ├── realtime-engine/        # Supabase/WebSocket room presence & state sync
-│   └── vietqr-engine/          # EMVCo TLV string generator & CRC16 checksum encoder
-├── docs/
-│   ├── SplitBill_Zero_Architecture.drawio   # Editable enterprise system design diagram
-│   ├── SplitBill_Zero_Architecture.png      # High-res architecture export
-│   ├── SplitBill_Zero_Sequence_Diagram.png  # Standard UML Sequence Diagram
-│   ├── SplitBill_Zero_OCR_Flowchart.png     # Algorithmic spatial matching flowchart
-│   └── SplitBill_Zero_UI_Showcase.png       # Production UI/UX spec & design showcase
+```text
+splitbill-zero/
+├── app/                        # Flutter Host Mobile App (Edge ML Kit OCR & Room Master)
+├── web/                        # Lightweight Guest Web PWA (React 19 + Tailwind v4, < 250KB)
+├── server/                     # Bun Native Backend Gateway (REST API + Realtime WebSocket Mesh)
+│   ├── .env.example            # Environment variables template for Supabase & Port
+│   ├── index.ts                # API routes & WebSocket pub/sub connection broker
+│   ├── ocrEngine.ts            # High-accuracy OCR & 2D spatial clustering service
+│   └── supabase.ts             # Backend Supabase DB persistence & Realtime channel sync
+├── shared/                     # Shared TypeScript schemas & event contracts
+├── supabase_schema.sql         # PostgreSQL table definitions & RLS security policies
+├── docs/                       # High-res Architecture & UI/UX showcase exports
 └── README.md
 ```
 
@@ -196,27 +196,69 @@ splitbill-zero/
 
 ## 🚀 Quickstart & Development
 
-### Prerequisites
-* Flutter SDK >= 3.22.x
-* Node.js >= 20.x
-* Docker (for local Supabase edge container)
+### 1. Prerequisites
+* **Bun >= 1.2.x** (for Backend Gateway & Web PWA)
+* **Flutter SDK >= 3.22.x / Dart >= 3.11.x**
+* **Supabase Account / Project** (Cloud or Local CLI Docker container)
 
+---
+
+### 2. Database & Supabase Environment Setup
+
+SplitBill Zero follows an enterprise **Zero-Client-Key security architecture**: Supabase credentials reside strictly at the Backend Gateway layer (`server/`), completely isolated from mobile and web client bundles.
+
+#### Step A: Initialize Database Schema
+1. Open your **Supabase Dashboard** ➔ Go to **SQL Editor**.
+2. Copy and execute the contents of [`supabase_schema.sql`](supabase_schema.sql):
+   - Creates the `public.table_rooms` table with optimized indexes.
+   - Enforces **Row Level Security (RLS)**: Public client read-only via exact room ID lookup, write operations restricted to Backend `service_role`.
+   - Enables Realtime Replication for the `table_rooms` publication.
+
+#### Step B: Configure Backend Environment Variables
+1. Navigate to the `server/` directory:
+   ```bash
+   cd server
+   cp .env.example .env
+   ```
+2. Populate `.env` with your Supabase project credentials (keep strictly private, `.env` is ignored by Git):
+   ```ini
+   PORT=3088
+   
+   # Supabase Credentials (from Supabase Dashboard -> Project Settings -> API)
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=eyJh...your-service-role-secret-key
+   ```
+   *(Note: If `SUPABASE_URL` is omitted, the Backend automatically operates in High-Speed In-Memory Mesh Mode with local 2-hour TTL auto-eviction).*
+
+---
+
+### 3. Running All Services Locally
+
+#### Step 1: Start Backend Gateway & Realtime Mesh
 ```bash
-# 1. Clone the repository
-git clone https://github.com/ducphan1311/splitbill-zero.git
-cd splitbill-zero
+cd server
+bun install
+bun run index.ts
+# Running on http://127.0.0.1:3088 and ws://127.0.0.1:3088/ws
+```
 
-# 2. Run local real-time mesh
-npm install
-npm run dev:realtime
+#### Step 2: Launch Guest Web Client (Zero-Install PWA)
+```bash
+cd web
+bun install
+bun run dev
+# Running on http://127.0.0.1:5173/
+```
 
-# 3. Launch Guest Web Client
-cd apps/guest-web
-npm run dev
-
-# 4. Run Flutter Mobile Host App
-cd apps/mobile-host
+#### Step 3: Launch Host Flutter App
+```bash
+cd app
 flutter pub get
+
+# To run in Chrome / Web Browser:
+flutter run -d chrome
+
+# To run on iOS Simulator or Android Device:
 flutter run
 ```
 
