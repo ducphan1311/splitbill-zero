@@ -8,7 +8,7 @@
 PRODUCT_NAME = splitbill_zero_host
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.aimess.splitbill.splitbillZeroHost
+PRODUCT_BUNDLE_IDENTIFIER = com.splitbillzero.splitbillZeroHost
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.aimess.splitbill. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.splitbillzero. All rights reserved.

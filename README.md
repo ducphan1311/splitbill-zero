@@ -38,7 +38,7 @@
 ## 🎨 Official Figma Design System
 
 The unified mobile flows, interaction states, and design system components are published on Figma:
-👉 **[Figma Design File: aimess-production](https://www.figma.com/design/o8mIiPoLyks3y0BV7fQ3sw/Untitled)**
+👉 **[Figma Design File: SplitBill Zero UI/UX Specification](https://www.figma.com/design/o8mIiPoLyks3y0BV7fQ3sw/Untitled)**
 - **Full Flow in Vietnamese:** Screens `01`, `01.B`, `02`, `03`, `04`, `05`.
 - **Full Flow in English (Global Pitching/Ad Version):** Live Receipt OCR Scan, Review & Edit Items, Table Session, Guest PWA, Dynamic VietQR, Global Settlement Hub.
 - **Design System Board (`131:445`):** Complete design tokens, typography scale, 5 interactive card states, micro-interactions, PWA constraints, and Fair Split Math Matrix.
