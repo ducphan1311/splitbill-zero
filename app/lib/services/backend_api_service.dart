@@ -77,6 +77,18 @@ class BackendApiService {
     }
   }
 
+  /// Lock Room on Backend and freeze split matrix
+  static Future<bool> lockRoom(String roomId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/rooms/$roomId/lock'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
   /// Fetch live room snapshot from Backend
   static Future<Map<String, dynamic>?> getRoomSnapshot(String roomId) async {
     try {

@@ -104,121 +104,126 @@ class _HostInfoDialogState extends State<HostInfoDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.slateCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(
-            top: BorderSide(color: AppColors.electricCyan, width: 2),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset : 12),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.slateCard,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(
+              top: BorderSide(color: AppColors.electricCyan, width: 2),
+            ),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Thông Tin Nhận Tiền Của Host 👑', style: AppStyles.displayLarge),
-              const SizedBox(height: 4),
-              const Text(
-                'Để bạn bè trong bàn quét mã VietQR tự động điền STK & số tiền chính xác.',
-                style: AppStyles.bodyMedium,
-              ),
-              const SizedBox(height: 18),
-
-              // Host Name Input
-              TextFormField(
-                controller: _nameController,
-                style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(
-                  labelText: 'Họ và tên chủ bàn',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
-                  prefixIcon: const Icon(Icons.person_outline, color: AppColors.electricCyan),
-                  filled: true,
-                  fillColor: AppColors.oledCanvas,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                ),
-                validator: (val) => (val == null || val.trim().isEmpty) ? 'Vui lòng nhập tên chủ bàn' : null,
-              ),
-              const SizedBox(height: 12),
-
-              // Bank Dropdown Selector
-              DropdownButtonFormField<BankInfo>(
-                initialValue: _selectedBank,
-                dropdownColor: AppColors.slateCard,
-                style: const TextStyle(color: AppColors.textPureWhite),
-                decoration: InputDecoration(
-                  labelText: 'Ngân hàng nhận tiền',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
-                  prefixIcon: const Icon(Icons.account_balance_outlined, color: AppColors.electricCyan),
-                  filled: true,
-                  fillColor: AppColors.oledCanvas,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                ),
-                items: popularBanks.map((bank) {
-                  return DropdownMenuItem(
-                    value: bank,
-                    child: Text('${bank.shortName} (${bank.name.split('(').last.replaceAll(')', '')})',
-                        style: const TextStyle(fontSize: 14, color: AppColors.textPureWhite)),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedBank = val);
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Account Number Input
-              TextFormField(
-                controller: _accountController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w700, letterSpacing: 1.1),
-                decoration: InputDecoration(
-                  labelText: 'Số tài khoản / Số điện thoại nhận',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
-                  prefixIcon: const Icon(Icons.credit_card, color: AppColors.amberGold),
-                  filled: true,
-                  fillColor: AppColors.oledCanvas,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                ),
-                validator: (val) => (val == null || val.trim().isEmpty) ? 'Vui lòng nhập số tài khoản' : null,
-              ),
-              const SizedBox(height: 20),
-
-              // Confirm CTA Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricCyan,
-                    foregroundColor: AppColors.textDark,
-                    elevation: 6,
-                    shadowColor: AppColors.cyanGlow,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                  const SizedBox(height: 16),
+                  const Text('Thông Tin Nhận Tiền Của Host 👑', style: AppStyles.displayLarge),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Để bạn bè trong bàn quét mã VietQR tự động điền STK & số tiền chính xác.',
+                    style: AppStyles.bodyMedium,
                   ),
-                  onPressed: _isCreating ? null : _submitAndCreateTable,
-                  child: _isCreating
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark))
-                      : const Text('Xác Nhận & Khởi Tạo Bàn Ăn 🚀', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                ),
+                  const SizedBox(height: 18),
+
+                  // Host Name Input
+                  TextFormField(
+                    controller: _nameController,
+                    style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      labelText: 'Họ và tên chủ bàn',
+                      labelStyle: const TextStyle(color: AppColors.textMuted),
+                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.electricCyan),
+                      filled: true,
+                      fillColor: AppColors.oledCanvas,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    ),
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Vui lòng nhập tên chủ bàn' : null,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Bank Dropdown Selector
+                  DropdownButtonFormField<BankInfo>(
+                    initialValue: _selectedBank,
+                    dropdownColor: AppColors.slateCard,
+                    style: const TextStyle(color: AppColors.textPureWhite),
+                    decoration: InputDecoration(
+                      labelText: 'Ngân hàng nhận tiền',
+                      labelStyle: const TextStyle(color: AppColors.textMuted),
+                      prefixIcon: const Icon(Icons.account_balance_outlined, color: AppColors.electricCyan),
+                      filled: true,
+                      fillColor: AppColors.oledCanvas,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    ),
+                    items: popularBanks.map((bank) {
+                      return DropdownMenuItem(
+                        value: bank,
+                        child: Text('${bank.shortName} (${bank.name.split('(').last.replaceAll(')', '')})',
+                            style: const TextStyle(fontSize: 14, color: AppColors.textPureWhite)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _selectedBank = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Account Number Input
+                  TextFormField(
+                    controller: _accountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w700, letterSpacing: 1.1),
+                    decoration: InputDecoration(
+                      labelText: 'Số tài khoản / Số điện thoại nhận',
+                      labelStyle: const TextStyle(color: AppColors.textMuted),
+                      prefixIcon: const Icon(Icons.credit_card, color: AppColors.amberGold),
+                      filled: true,
+                      fillColor: AppColors.oledCanvas,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    ),
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Vui lòng nhập số tài khoản' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Confirm CTA Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.electricCyan,
+                        foregroundColor: AppColors.textDark,
+                        elevation: 6,
+                        shadowColor: AppColors.cyanGlow,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                      ),
+                      onPressed: _isCreating ? null : _submitAndCreateTable,
+                      child: _isCreating
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark))
+                          : const Text('Xác Nhận & Khởi Tạo Bàn Ăn 🚀', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
               ),
-              const SizedBox(height: 10),
-            ],
+            ),
           ),
         ),
       ),

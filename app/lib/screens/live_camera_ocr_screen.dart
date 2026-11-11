@@ -182,6 +182,15 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
     }
   }
 
+  /// Clear all scanned results and reset state back to fresh camera viewfinder
+  void _clearScannedState() {
+    setState(() {
+      _detectedItems = [];
+      _uploadedImageBytes = null;
+      _ocrStatusMessage = 'Đã xóa dữ liệu quét. Vui lòng chụp hoặc chọn ảnh hóa đơn mới.';
+    });
+  }
+
   @override
   void dispose() {
     _cameraController?.dispose();
@@ -241,14 +250,16 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                       Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.upload_file, color: AppColors.electricCyan),
-                            tooltip: 'Chọn ảnh hóa đơn từ máy',
+                            icon: const Icon(Icons.photo_library_outlined, color: AppColors.electricCyan),
+                            tooltip: 'Chọn ảnh từ thư viện',
                             onPressed: _pickReceiptImageFile,
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.flash_on, color: AppColors.electricCyan),
-                            onPressed: () {},
-                          ),
+                          if (_detectedItems.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.refresh, color: AppColors.amberGold),
+                              tooltip: 'Xóa kết quả quét',
+                              onPressed: _clearScannedState,
+                            ),
                         ],
                       )
                     ],
@@ -519,6 +530,7 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                   // Secondary Action Buttons
                   Row(
                     children: [
+                      // Button 1: Thêm/Sửa món
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
@@ -539,10 +551,12 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                               });
                             }
                           },
-                          child: const Text('✏️ Sửa / Thêm món', style: TextStyle(color: AppColors.electricCyan, fontSize: 13, fontWeight: FontWeight.w600)),
+                          child: const Text('✏️ Sửa / Thêm', style: TextStyle(color: AppColors.electricCyan, fontSize: 13, fontWeight: FontWeight.w600)),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
+
+                      // Button 2: Chọn từ thư viện ảnh
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
@@ -550,8 +564,36 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          onPressed: _captureAndScanReceipt,
-                          child: const Text('📷 Chụp & Quét Lại', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                          onPressed: _pickReceiptImageFile,
+                          child: const Text('🖼️ Thư viện', style: TextStyle(color: AppColors.textPureWhite, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Button 3: Clear / Quét lại
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: _detectedItems.isNotEmpty
+                                  ? AppColors.rubyRed.withValues(alpha: 0.6)
+                                  : Colors.white.withValues(alpha: 0.15),
+                            ),
+                            backgroundColor: _detectedItems.isNotEmpty
+                                ? AppColors.rubyRed.withValues(alpha: 0.1)
+                                : Colors.transparent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: _detectedItems.isNotEmpty ? _clearScannedState : _captureAndScanReceipt,
+                          child: Text(
+                            _detectedItems.isNotEmpty ? '🗑️ Clear' : '📷 Chụp lại',
+                            style: TextStyle(
+                              color: _detectedItems.isNotEmpty ? AppColors.rubyRed : AppColors.textMuted,
+                              fontSize: 13,
+                              fontWeight: _detectedItems.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
                         ),
                       ),
                     ],

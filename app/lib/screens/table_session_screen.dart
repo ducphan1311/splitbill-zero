@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/bill_item.dart';
+import '../services/backend_api_service.dart';
 import '../theme/app_theme.dart';
 
 class TableSessionScreen extends StatefulWidget {
@@ -26,17 +28,80 @@ class TableSessionScreen extends StatefulWidget {
 }
 
 class _TableSessionScreenState extends State<TableSessionScreen> {
-  late List<DiningGuest> guests;
+  List<DiningGuest> guests = [];
+  Timer? _pollingTimer;
+  String _roomStatus = 'OPEN';
+  bool _isLoadingGuests = true;
 
   @override
   void initState() {
     super.initState();
-    // Default simulated dining guests matching Figma Screen 02
+    // Initialize host as first member
     guests = [
-      DiningGuest(id: '1', name: widget.hostName, isHost: true, claimedItemIds: widget.items.isNotEmpty ? [widget.items.first.id] : []),
-      DiningGuest(id: '2', name: 'Trần Hải Nam', claimedItemIds: widget.items.length > 1 ? [widget.items[1].id] : []),
-      DiningGuest(id: '3', name: 'Nguyễn Thùy Linh', claimedItemIds: []),
+      DiningGuest(
+        id: 'host',
+        name: widget.hostName,
+        isHost: true,
+        claimedItemIds: [],
+      ),
     ];
+    _fetchLiveRoomState();
+    // Poll backend every 2.5 seconds to sync members and claims in real-time
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      _fetchLiveRoomState();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchLiveRoomState() async {
+    try {
+      final snapshot = await BackendApiService.getRoomSnapshot(widget.roomId);
+      if (snapshot != null && mounted) {
+        final Map<String, dynamic> rawGuests = snapshot['guests'] ?? {};
+        final status = snapshot['status'] ?? 'OPEN';
+
+        final List<DiningGuest> updatedGuests = [];
+
+        // Always ensure Host is present
+        bool hostFound = false;
+        rawGuests.forEach((key, val) {
+          if (val is Map<String, dynamic>) {
+            final isHost = val['isHost'] == true || key == 'host';
+            if (isHost) hostFound = true;
+            final claimedList = (val['claimedItemIds'] as List?)?.map((e) => e.toString()).toList() ?? [];
+            updatedGuests.add(DiningGuest(
+              id: val['guestId'] ?? key,
+              name: val['guestName'] ?? 'Khách',
+              isHost: isHost,
+              claimedItemIds: claimedList,
+            ));
+          }
+        });
+
+        if (!hostFound) {
+          updatedGuests.insert(
+            0,
+            DiningGuest(
+              id: 'host',
+              name: widget.hostName,
+              isHost: true,
+              claimedItemIds: [],
+            ),
+          );
+        }
+
+        setState(() {
+          guests = updatedGuests;
+          _roomStatus = status;
+          _isLoadingGuests = false;
+        });
+      }
+    } catch (_) {}
   }
 
   String get tableUrl =>
@@ -196,6 +261,12 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
 
               // Guests List
               ...guests.map((g) {
+                // Find names of dishes claimed by this guest
+                final claimedDishNames = widget.items
+                    .where((dish) => g.claimedItemIds.contains(dish.id))
+                    .map((dish) => dish.name)
+                    .toList();
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -206,47 +277,89 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
                       color: g.isHost ? AppColors.amberGold.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.08),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: g.isHost ? AppColors.amberGold : AppColors.electricCyan,
-                        child: Text(g.name[0], style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(g.name, style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(
-                              g.claimedItemIds.isNotEmpty ? 'Đã chọn ${g.claimedItemIds.length} món' : 'Đang lướt menu chọn món...',
-                              style: AppStyles.caption,
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: g.isHost ? AppColors.amberGold : AppColors.electricCyan,
+                            child: Text(g.name.isNotEmpty ? g.name[0].toUpperCase() : '?',
+                                style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(g.name, style: const TextStyle(color: AppColors.textPureWhite, fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  g.claimedItemIds.isNotEmpty
+                                      ? 'Đã chọn ${g.claimedItemIds.length} món'
+                                      : 'Đang lướt menu chọn món...',
+                                  style: AppStyles.caption,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          if (g.isHost)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.amberBadge,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.amberGold.withValues(alpha: 0.4)),
+                              ),
+                              child: const Text('HOST 👑', style: TextStyle(color: AppColors.amberGold, fontSize: 11, fontWeight: FontWeight.bold)),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: g.claimedItemIds.isNotEmpty
+                                    ? AppColors.emeraldBadge
+                                    : AppColors.cyanGlow.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: g.claimedItemIds.isNotEmpty
+                                      ? AppColors.emeraldGreen.withValues(alpha: 0.4)
+                                      : AppColors.electricCyan.withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Text(
+                                g.claimedItemIds.isNotEmpty ? 'ĐÃ CHỌN ✓' : 'ĐANG CHỌN...',
+                                style: TextStyle(
+                                  color: g.claimedItemIds.isNotEmpty ? AppColors.emeraldGreen : AppColors.electricCyan,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      if (g.isHost)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.amberBadge,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.amberGold.withValues(alpha: 0.4)),
-                          ),
-                          child: const Text('HOST 👑', style: TextStyle(color: AppColors.amberGold, fontSize: 11, fontWeight: FontWeight.bold)),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.cyanGlow.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.electricCyan.withValues(alpha: 0.4)),
-                          ),
-                          child: const Text('CHỌN...', style: TextStyle(color: AppColors.electricCyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                      if (claimedDishNames.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: claimedDishNames.map((dishName) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.oledCanvas,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              ),
+                              child: Text(
+                                dishName,
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                              ),
+                            );
+                          }).toList(),
                         ),
+                      ],
                     ],
                   ),
                 );
@@ -260,22 +373,58 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricCyan,
+                    backgroundColor: _roomStatus == 'LOCKED' ? Colors.white.withValues(alpha: 0.1) : AppColors.electricCyan,
+                    foregroundColor: _roomStatus == 'LOCKED' ? AppColors.textMuted : AppColors.textDark,
                     shadowColor: AppColors.cyanGlow,
-                    elevation: 8,
+                    elevation: _roomStatus == 'LOCKED' ? 0 : 8,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    if (_roomStatus == 'LOCKED') {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Bàn đã được khóa trước đó.'),
+                          backgroundColor: AppColors.electricCyan,
+                        ),
+                      );
+                      return;
+                    }
+                    messenger.showSnackBar(
                       const SnackBar(
-                        content: Text('Đã chốt bàn! Đang tính toán ma trận chia tiền và tạo VietQR...'),
-                        backgroundColor: AppColors.emeraldGreen,
+                        content: Text('Đang gửi lệnh khóa bàn & chốt danh sách để mở thanh toán...'),
+                        backgroundColor: AppColors.amberGold,
                       ),
                     );
+                    final success = await BackendApiService.lockRoom(widget.roomId);
+                    if (!mounted) return;
+                    if (success) {
+                      setState(() {
+                        _roomStatus = 'LOCKED';
+                      });
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('🔒 Đã chốt bàn! Mọi người trên web hiện đã có thể bấm Thanh Toán VietQR.'),
+                          backgroundColor: AppColors.emeraldGreen,
+                        ),
+                      );
+                    }
                   },
-                  child: const Text(
-                    'Khóa Bàn & Tiến Hành Chia Tiền →',
-                    style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.w700),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _roomStatus == 'LOCKED' ? Icons.lock_outline : Icons.lock_open_rounded,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _roomStatus == 'LOCKED'
+                            ? 'BÀN ĐÃ KHÓA (MỌI NGƯỜI ĐANG THANH TOÁN)'
+                            : 'Chốt Món & Mở Khóa Thanh Toán Cho Cả Bàn 🚀',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -319,14 +468,30 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.amberBadge,
+                  color: _roomStatus == 'LOCKED'
+                      ? AppColors.emeraldBadge
+                      : AppColors.amberBadge,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.amberGold.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: _roomStatus == 'LOCKED'
+                        ? AppColors.emeraldGreen.withValues(alpha: 0.3)
+                        : AppColors.amberGold.withValues(alpha: 0.3),
+                  ),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    '⏳ Chờ Linh hoàn tất chọn món (1 người đang chọn)',
-                    style: TextStyle(color: AppColors.amberGold, fontSize: 12, fontWeight: FontWeight.w500),
+                    _roomStatus == 'LOCKED'
+                        ? '🔒 Bàn đã khóa! Khách đang thanh toán VietQR chuyển khoản'
+                        : _isLoadingGuests
+                            ? '⚡ Đang đồng bộ trạng thái bàn realtime...'
+                            : guests.length > 1
+                                ? '● ${guests.length - 1} khách đang mở link và chọn món trên web'
+                                : '📱 Hãy gửi link hoặc đưa mã QR cho bạn bè quét để chọn món!',
+                    style: TextStyle(
+                      color: _roomStatus == 'LOCKED' ? AppColors.emeraldGreen : AppColors.amberGold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),

@@ -53,6 +53,7 @@ class _EditBillItemsScreenState extends State<EditBillItemsScreen> {
   void _addNewCustomItem() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.slateCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -60,83 +61,88 @@ class _EditBillItemsScreenState extends State<EditBillItemsScreen> {
       builder: (ctx) {
         String name = '';
         double price = 0;
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-            left: 20,
-            right: 20,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Thêm món ngoài hóa đơn',
-                style: AppStyles.titleMedium,
+        final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: bottomInset > 0 ? bottomInset + 16 : 24,
+              left: 20,
+              right: 20,
+              top: 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Thêm món ngoài hóa đơn',
+                    style: AppStyles.titleMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    autofocus: true,
+                    style: const TextStyle(color: AppColors.textPureWhite),
+                    decoration: InputDecoration(
+                      labelText: 'Tên món (vd: Khăn lạnh, Bia thêm)',
+                      labelStyle: const TextStyle(color: AppColors.textMuted),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.cyanBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.electricCyan),
+                      ),
+                    ),
+                    onChanged: (val) => name = val,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: AppColors.textPureWhite),
+                    decoration: InputDecoration(
+                      labelText: 'Giá tiền (VNĐ)',
+                      labelStyle: const TextStyle(color: AppColors.textMuted),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.cyanBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.electricCyan),
+                      ),
+                    ),
+                    onChanged: (val) => price = double.tryParse(val) ?? 0,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.electricCyan,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        if (name.isNotEmpty && price > 0) {
+                          setState(() {
+                            items.add(BillItem(
+                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                              name: name,
+                              price: price,
+                              quantity: 1,
+                            ));
+                          });
+                          Navigator.pop(ctx);
+                        }
+                      },
+                      child: const Text('Thêm vào bàn', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                autofocus: true,
-                style: const TextStyle(color: AppColors.textPureWhite),
-                decoration: InputDecoration(
-                  labelText: 'Tên món (vd: Khăn lạnh, Bia thêm)',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.cyanBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.electricCyan),
-                  ),
-                ),
-                onChanged: (val) => name = val,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: AppColors.textPureWhite),
-                decoration: InputDecoration(
-                  labelText: 'Giá tiền (VNĐ)',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.cyanBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.electricCyan),
-                  ),
-                ),
-                onChanged: (val) => price = double.tryParse(val) ?? 0,
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricCyan,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    if (name.isNotEmpty && price > 0) {
-                      setState(() {
-                        items.add(BillItem(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          name: name,
-                          price: price,
-                          quantity: 1,
-                        ));
-                      });
-                      Navigator.pop(ctx);
-                    }
-                  },
-                  child: const Text('Thêm vào bàn', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -283,30 +289,29 @@ class _EditBillItemsScreenState extends State<EditBillItemsScreen> {
             ),
 
             // Bottom CTA Buttons
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.electricCyan,
-                        elevation: 8,
-                        shadowColor: AppColors.cyanGlow,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                      ),
-                      onPressed: () {
-                        HostInfoDialog.show(context, items);
-                      },
-                      child: const Text(
-                        'Lưu Món & Tạo Bàn Chia Tiền →',
-                        style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16, top: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.electricCyan,
+                      elevation: 8,
+                      shadowColor: AppColors.cyanGlow,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                    ),
+                    onPressed: () {
+                      HostInfoDialog.show(context, items);
+                    },
+                    child: const Text(
+                      'Lưu Món & Tạo Bàn Chia Tiền →',
+                      style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],

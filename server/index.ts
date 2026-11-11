@@ -142,6 +142,47 @@ const server = Bun.serve<WebSocketData>({
       }
     }
 
+    // HTTP API: Lock Room & Freeze Split Matrix
+    if (url.pathname.match(/^\/api\/rooms\/[^\/]+\/lock$/) && req.method === 'POST') {
+      try {
+        const parts = url.pathname.split('/');
+        const roomId = parts[3].toUpperCase();
+        let room = rooms.get(roomId);
+        if (!room) {
+          const dbRoom = await fetchRoomFromSupabase(roomId);
+          if (dbRoom) {
+            room = dbRoom;
+            rooms.set(roomId, room);
+          }
+        }
+
+        if (!room) {
+          return new Response(JSON.stringify({ error: 'Room not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          });
+        }
+
+        room.status = 'LOCKED';
+        room.updatedAt = Date.now();
+        rooms.set(roomId, room);
+
+        // Broadcast realtime to all guests in the room
+        const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
+        server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+        syncRoomToSupabase(room);
+
+        return new Response(JSON.stringify({ success: true, room }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
     // HTTP Room state snapshot endpoint
     if (url.pathname.startsWith('/api/rooms/')) {
       const roomId = url.pathname.split('/').pop()?.toUpperCase() || '';
