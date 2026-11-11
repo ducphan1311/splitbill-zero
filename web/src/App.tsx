@@ -282,84 +282,108 @@ export function App() {
       {/* Screen 03: Claiming Board */}
       {step === 'claim' && (
         <main className="w-full max-w-md flex flex-col gap-3 pb-28">
-          {roomState.items.map((dish) => {
-            const claimers = getItemClaimers(dish.id);
-            const isClaimedByMe = claimers.some((g) => g.guestId === guestId);
-            const isShared = claimers.length > 1;
-            const isClaimedByOthersOnly = !isClaimedByMe && claimers.length > 0;
-
-            return (
-              <div
-                key={dish.id}
-                onClick={() => toggleClaimDish(dish.id)}
-                className={`p-4 rounded-2xl border transition-all select-none flex items-center justify-between ${
-                  isRoomLocked ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
-                } ${
-                  isClaimedByMe
-                    ? 'bg-[#121726] border-[#00D9FF] shadow-[0_0_15px_rgba(0,217,255,0.15)]'
-                    : isClaimedByOthersOnly
-                    ? 'bg-[#121726]/60 border-white/5 opacity-70'
-                    : 'bg-[#121726] border-white/10 hover:border-white/20'
-                }`}
+          {roomState.items.length === 0 ? (
+            <div className="p-8 rounded-2xl bg-[#121726] border border-white/10 flex flex-col items-center justify-center text-center gap-3">
+              <RefreshCw size={28} className="text-[#00D9FF] animate-spin" />
+              <div className="text-sm font-semibold text-white">Đang tải danh sách món từ hóa đơn...</div>
+              <p className="text-xs text-[#9EADC7]">
+                Nếu vừa quét xong, vui lòng chờ 1-2 giây hoặc chạm nút bên dưới để tải lại dữ liệu.
+              </p>
+              <button
+                onClick={() => {
+                  const defaultHttpUrl = 'https://splitbill-zero-server.onrender.com';
+                  const httpBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://localhost:3088'
+                    : (import.meta.env.VITE_SERVER_URL || defaultHttpUrl);
+                  fetch(`${httpBase}/api/rooms/${initialRoomId}`)
+                    .then((r) => r.json())
+                    .then((d) => d?.roomId && setRoomState(d));
+                }}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-[#00D9FF] border border-[#00D9FF]/30 cursor-pointer"
               >
-                <div className="flex flex-col gap-1.5 flex-1 pr-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-base text-[#FAFAFF]">{dish.name}</span>
-                    {isShared && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#FAB22E]/20 text-[#FAB22E] border border-[#FAB22E]/40">
-                        CHIA {claimers.length}
-                      </span>
-                    )}
-                  </div>
+                🔄 Tải lại món ăn
+              </button>
+            </div>
+          ) : (
+            roomState.items.map((dish) => {
+              const claimers = getItemClaimers(dish.id);
+              const isClaimedByMe = claimers.some((g) => g.guestId === guestId);
+              const isShared = claimers.length > 1;
+              const isClaimedByOthersOnly = !isClaimedByMe && claimers.length > 0;
 
-                  {/* Claimer Badges */}
-                  {claimers.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {claimers.map((c) => (
-                        <span
-                          key={c.guestId}
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            c.guestId === guestId
-                              ? 'bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/40'
-                              : 'bg-white/10 text-gray-300'
-                          }`}
-                        >
-                          {c.guestId === guestId ? 'Bạn' : c.guestName}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <span className="text-xs text-[#9EADC7]">
-                    {isClaimedByMe && isShared
-                      ? `Chia đều ${claimers.length} người • ${Math.round(
-                          (dish.price * dish.quantity) / claimers.length
-                        ).toLocaleString('vi-VN')} đ/người`
-                      : isClaimedByMe
-                      ? 'Chính bạn đã nhận món này'
+              return (
+                <div
+                  key={dish.id}
+                  onClick={() => toggleClaimDish(dish.id)}
+                  className={`p-4 rounded-2xl border transition-all select-none flex items-center justify-between ${
+                    isRoomLocked ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                  } ${
+                    isClaimedByMe
+                      ? 'bg-[#121726] border-[#00D9FF] shadow-[0_0_15px_rgba(0,217,255,0.15)]'
                       : isClaimedByOthersOnly
-                      ? `Đang được chọn bởi ${claimers.length} người`
-                      : 'Chưa có ai chọn • Chạm để nhận'}
-                  </span>
-                </div>
+                      ? 'bg-[#121726]/60 border-white/5 opacity-70'
+                      : 'bg-[#121726] border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex flex-col gap-1.5 flex-1 pr-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-base text-[#FAFAFF]">{dish.name}</span>
+                      {isShared && (
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#FAB22E]/20 text-[#FAB22E] border border-[#FAB22E]/40">
+                          CHIA {claimers.length}
+                        </span>
+                      )}
+                    </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="text-base font-bold text-[#FAB22E]">
-                    {(dish.price * dish.quantity).toLocaleString('vi-VN')} đ
-                  </span>
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
-                      isClaimedByMe
-                        ? 'bg-[#00D9FF] border-[#00D9FF] text-[#080D14]'
-                        : 'border-white/20 text-transparent'
-                    }`}
-                  >
-                    <Check size={14} strokeWidth={3} />
+                    {/* Claimer Badges */}
+                    {claimers.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {claimers.map((c) => (
+                          <span
+                            key={c.guestId}
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                              c.guestId === guestId
+                                ? 'bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/40'
+                                : 'bg-white/10 text-gray-300'
+                            }`}
+                          >
+                            {c.guestId === guestId ? 'Bạn' : c.guestName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <span className="text-xs text-[#9EADC7]">
+                      {isClaimedByMe && isShared
+                        ? `Chia đều ${claimers.length} người • ${Math.round(
+                            (dish.price * dish.quantity) / claimers.length
+                          ).toLocaleString('vi-VN')} đ/người`
+                        : isClaimedByMe
+                        ? 'Chính bạn đã nhận món này'
+                        : isClaimedByOthersOnly
+                        ? `Đang được chọn bởi ${claimers.length} người`
+                        : 'Chưa có ai chọn • Chạm để nhận'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-base font-bold text-[#FAB22E]">
+                      {(dish.price * dish.quantity).toLocaleString('vi-VN')} đ
+                    </span>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                        isClaimedByMe
+                          ? 'bg-[#00D9FF] border-[#00D9FF] text-[#080D14]'
+                          : 'border-white/20 text-transparent'
+                      }`}
+                    >
+                      <Check size={14} strokeWidth={3} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
 
           {/* Breakdown summary card */}
           <div className="mt-2 p-4 rounded-2xl bg-[#0E1322] border border-white/10 flex flex-col gap-2">

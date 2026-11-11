@@ -246,7 +246,7 @@ const server = Bun.serve<WebSocketData>({
           if (!room) {
             room = {
               roomId,
-              hostName: msg.guestName,
+              hostName: 'Chủ Bàn',
               hostBankBin: '970432',
               hostAccountNumber: '0395828955',
               items: [],
@@ -257,7 +257,7 @@ const server = Bun.serve<WebSocketData>({
             };
           }
 
-          // Register or update guest presence
+          // Register or update guest presence - DO NOT OVERWRITE EXISTING ITEMS IF ANY
           if (!room.guests[msg.guestId]) {
             room.guests[msg.guestId] = {
               guestId: msg.guestId,

@@ -78,7 +78,14 @@ class _HostInfoDialogState extends State<HostInfoDialog> {
         items: widget.items,
       );
       if (!success) {
-        debugPrint('Backend sync returned non-200');
+        debugPrint('Backend sync returned non-200, retrying once...');
+        await BackendApiService.createRoom(
+          roomId: roomId,
+          hostName: hostName,
+          hostBankBin: bankBin,
+          hostAccountNumber: accountNumber,
+          items: widget.items,
+        );
       }
     } catch (e) {
       debugPrint('Sync room to backend failed: $e');
