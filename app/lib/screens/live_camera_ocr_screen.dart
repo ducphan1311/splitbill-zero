@@ -12,7 +12,7 @@ import '../services/backend_api_service.dart';
 import '../services/spatial_ocr_parser.dart';
 import '../theme/app_theme.dart';
 import 'edit_bill_items_screen.dart';
-import 'table_session_screen.dart';
+import 'host_info_dialog.dart';
 
 class LiveCameraOcrScreen extends StatefulWidget {
   const LiveCameraOcrScreen({super.key});
@@ -506,15 +506,7 @@ class _LiveCameraOcrScreenState extends State<LiveCameraOcrScreen> {
                               _captureAndScanReceipt();
                             }
                           : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TableSessionScreen(
-                                    roomId: 'VN-8842',
-                                    items: _detectedItems,
-                                  ),
-                                ),
-                              );
+                              HostInfoDialog.show(context, _detectedItems);
                             },
                       child: Text(
                         _detectedItems.isEmpty ? '📸 Bắt đầu Quét Hóa Đơn' : 'Xác nhận & Tạo Bàn →',

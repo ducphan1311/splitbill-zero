@@ -54,6 +54,8 @@ class BackendApiService {
   static Future<bool> createRoom({
     required String roomId,
     required String hostName,
+    required String hostBankBin,
+    required String hostAccountNumber,
     required List<BillItem> items,
   }) async {
     try {
@@ -63,8 +65,8 @@ class BackendApiService {
         body: jsonEncode({
           'roomId': roomId,
           'hostName': hostName,
-          'hostBankBin': '970432',
-          'hostAccountNumber': '0395828955',
+          'hostBankBin': hostBankBin,
+          'hostAccountNumber': hostAccountNumber,
           'items': items.map((e) => e.toJson()).toList(),
         }),
       );

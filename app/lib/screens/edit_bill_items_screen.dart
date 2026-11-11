@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/bill_item.dart';
 import '../theme/app_theme.dart';
-import 'table_session_screen.dart';
+import 'host_info_dialog.dart';
 
 class EditBillItemsScreen extends StatefulWidget {
   final List<BillItem> initialItems;
@@ -298,15 +298,7 @@ class _EditBillItemsScreenState extends State<EditBillItemsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TableSessionScreen(
-                              roomId: 'VN-8842',
-                              items: items,
-                            ),
-                          ),
-                        );
+                        HostInfoDialog.show(context, items);
                       },
                       child: const Text(
                         'Lưu Món & Tạo Bàn Chia Tiền →',

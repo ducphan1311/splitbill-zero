@@ -8,11 +8,17 @@ import '../theme/app_theme.dart';
 class TableSessionScreen extends StatefulWidget {
   final String roomId;
   final List<BillItem> items;
+  final String hostName;
+  final String hostBankBin;
+  final String hostAccountNumber;
 
   const TableSessionScreen({
     super.key,
     required this.roomId,
     required this.items,
+    this.hostName = 'Phan Minh Đức',
+    this.hostBankBin = '970432',
+    this.hostAccountNumber = '0395828955',
   });
 
   @override
@@ -27,8 +33,8 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
     super.initState();
     // Default simulated dining guests matching Figma Screen 02
     guests = [
-      DiningGuest(id: '1', name: 'Phan Minh Đức', isHost: true, claimedItemIds: ['item_hotpot']),
-      DiningGuest(id: '2', name: 'Trần Hải Nam', claimedItemIds: ['item_tea', 'item_water']),
+      DiningGuest(id: '1', name: widget.hostName, isHost: true, claimedItemIds: widget.items.isNotEmpty ? [widget.items.first.id] : []),
+      DiningGuest(id: '2', name: 'Trần Hải Nam', claimedItemIds: widget.items.length > 1 ? [widget.items[1].id] : []),
       DiningGuest(id: '3', name: 'Nguyễn Thùy Linh', claimedItemIds: []),
     ];
   }
@@ -271,6 +277,38 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
                     'Khóa Bàn & Tiến Hành Chia Tiền →',
                     style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.w700),
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Host Bank Info Summary Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.slateCard,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet_outlined, size: 20, color: AppColors.amberGold),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('TÀI KHOẢN NHẬN TIỀN CỦA HOST', style: AppStyles.caption.copyWith(fontSize: 10)),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${widget.hostName} • STK: ${widget.hostAccountNumber} (BIN: ${widget.hostBankBin})',
+                            style: const TextStyle(color: AppColors.textPureWhite, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

@@ -6,6 +6,22 @@ import { openBankingApp, VIETNAM_POPULAR_BANKS } from './utils/bankLauncher';
 import type { TableRoomState, ServerMessage, ClientMessage } from '../../shared/types';
 
 export function App() {
+  // Extract roomId dynamically from URL path (/room/:roomId) or query param (?room=...)
+  const getInitialRoomId = () => {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const roomIndex = pathParts.indexOf('room');
+    if (roomIndex !== -1 && pathParts[roomIndex + 1]) {
+      return pathParts[roomIndex + 1].toUpperCase();
+    }
+    const searchParams = new URLSearchParams(window.location.search);
+    const queryRoom = searchParams.get('room');
+    if (queryRoom) return queryRoom.toUpperCase();
+
+    return 'VN-8842';
+  };
+
+  const initialRoomId = getInitialRoomId();
+
   const [currentGuestId] = useState('guest_nam');
   const [currentGuestName] = useState('Trần Hải Nam');
   const [step, setStep] = useState<'claim' | 'settle'>('claim');
@@ -14,7 +30,7 @@ export function App() {
 
   // Live Room State from Realtime Mesh Server
   const [roomState, setRoomState] = useState<TableRoomState>({
-    roomId: 'VN-8842',
+    roomId: initialRoomId,
     hostName: 'Phan Minh Đức',
     hostBankBin: '970432', // VPBank
     hostAccountNumber: '0395828955',
@@ -36,6 +52,28 @@ export function App() {
 
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Initial HTTP Fetch to load room snapshot immediately (especially for fresh scanned bills)
+  useEffect(() => {
+    const defaultHttpUrl = 'https://splitbill-zero-server.onrender.com';
+    const httpBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3088'
+      : (import.meta.env.VITE_SERVER_URL || defaultHttpUrl);
+
+    fetch(`${httpBase}/api/rooms/${initialRoomId}`)
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Room not found');
+      })
+      .then((data: TableRoomState) => {
+        if (data && data.roomId) {
+          setRoomState(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Initial room fetch failed (fallback to default)', err);
+      });
+  }, [initialRoomId]);
+
   // Connect to Bun WebSocket Mesh Gateway
   useEffect(() => {
     // Default to hosted server on Render if not running on local machine
@@ -50,7 +88,7 @@ export function App() {
       setIsConnected(true);
       const joinMsg: ClientMessage = {
         type: 'JOIN_ROOM',
-        roomId: 'VN-8842',
+        roomId: initialRoomId,
         guestId: currentGuestId,
         guestName: currentGuestName,
       };
@@ -255,7 +293,12 @@ export function App() {
           <div className="w-full p-6 rounded-3xl bg-[#121726] border border-white/15 shadow-2xl flex flex-col items-center gap-4">
             <div className="w-full flex justify-between items-center text-xs text-[#9EADC7] border-b border-white/10 pb-3">
               <span>CHỦ BÀN NHẬN TIỀN:</span>
-              <span className="font-bold text-[#FAFAFF]">{roomState.hostName.toUpperCase()} (VPBANK)</span>
+              <span className="font-bold text-[#FAFAFF]">{roomState.hostName.toUpperCase()}</span>
+            </div>
+
+            <div className="w-full flex justify-between items-center text-xs text-[#9EADC7]">
+              <span>STK THỤ HƯỞNG:</span>
+              <span className="font-mono font-bold text-[#00D9FF]">{roomState.hostAccountNumber} (BIN: {roomState.hostBankBin})</span>
             </div>
 
             <div className="text-3xl font-extrabold text-[#FAB22E] tracking-tight">
