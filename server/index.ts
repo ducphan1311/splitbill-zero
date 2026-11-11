@@ -304,6 +304,7 @@ const server = Bun.serve<WebSocketData>({
 
           const stateMsg: ServerMessage = { type: 'ROOM_STATE', state: room };
           server.publish(`room:${roomId}`, JSON.stringify(stateMsg));
+          ws.send(JSON.stringify(stateMsg));
 
           // Sync to Supabase in background
           syncRoomToSupabase(room);

@@ -45,9 +45,18 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
         claimedItemIds: [],
       ),
     ];
-    _fetchLiveRoomState();
-    // Poll backend every 2.5 seconds to sync members and claims in real-time
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+
+    // Ensure room is immediately registered on Backend with all scanned items
+    BackendApiService.createRoom(
+      roomId: widget.roomId,
+      hostName: widget.hostName,
+      hostBankBin: widget.hostBankBin,
+      hostAccountNumber: widget.hostAccountNumber,
+      items: widget.items,
+    ).then((_) => _fetchLiveRoomState());
+
+    // Poll backend every 2 seconds to sync members and claims in real-time
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 2000), (_) {
       _fetchLiveRoomState();
     });
   }

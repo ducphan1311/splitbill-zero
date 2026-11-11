@@ -108,8 +108,18 @@ export function App() {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data) as ServerMessage;
-        if (msg.type === 'ROOM_STATE') {
-          setRoomState(msg.state);
+        if (msg.type === 'ROOM_STATE' && msg.state) {
+          setRoomState((prev) => {
+            // CRITICAL: If incoming state has empty items (e.g. transient sync gap), preserve existing loaded items!
+            const mergedItems = (msg.state.items && msg.state.items.length > 0)
+              ? msg.state.items
+              : prev.items;
+
+            return {
+              ...msg.state,
+              items: mergedItems,
+            };
+          });
         }
       } catch (e) {
         console.error('Failed to parse WS msg', e);
@@ -146,26 +156,28 @@ export function App() {
         action: 'TOGGLE',
       };
       wsRef.current.send(JSON.stringify(claimMsg));
-    } else {
-      // Optimistic offline toggle
-      setRoomState((prev) => {
-        const currentClaimed = prev.guests[guestId]?.claimedItemIds || [];
-        const hasClaimed = currentClaimed.includes(itemId);
-        return {
-          ...prev,
-          guests: {
-            ...prev.guests,
-            [guestId]: {
-              guestId: guestId,
-              guestName: guestName,
-              claimedItemIds: hasClaimed
-                ? currentClaimed.filter((id) => id !== itemId)
-                : [...currentClaimed, itemId],
-            },
-          },
-        };
-      });
     }
+
+    // Always optimistically update local selection without touching items list!
+    setRoomState((prev) => {
+      const currentClaimed = prev.guests[guestId]?.claimedItemIds || [];
+      const hasClaimed = currentClaimed.includes(itemId);
+      return {
+        ...prev,
+        guests: {
+          ...prev.guests,
+          [guestId]: {
+            guestId: guestId,
+            guestName: guestName,
+            isHost: false,
+            isPaid: false,
+            claimedItemIds: hasClaimed
+              ? currentClaimed.filter((id) => id !== itemId)
+              : [...currentClaimed, itemId],
+          },
+        },
+      };
+    });
   };
 
   // Compute how many guests claimed each dish
