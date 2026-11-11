@@ -67,7 +67,7 @@ class _TableSessionScreenState extends State<TableSessionScreen> {
 
         final List<DiningGuest> updatedGuests = [];
 
-        // Always ensure Host is present
+        // Parse all guests from Backend
         bool hostFound = false;
         rawGuests.forEach((key, val) {
           if (val is Map<String, dynamic>) {

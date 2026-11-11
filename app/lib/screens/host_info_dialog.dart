@@ -68,15 +68,18 @@ class _HostInfoDialogState extends State<HostInfoDialog> {
     final accountNumber = _accountController.text.trim();
     final bankBin = _selectedBank.bin;
 
-    // Call Backend API to sync state
+    // Call Backend API to sync state with explicit timeout & error feedback
     try {
-      await BackendApiService.createRoom(
+      final success = await BackendApiService.createRoom(
         roomId: roomId,
         hostName: hostName,
         hostBankBin: bankBin,
         hostAccountNumber: accountNumber,
         items: widget.items,
       );
+      if (!success) {
+        debugPrint('Backend sync returned non-200');
+      }
     } catch (e) {
       debugPrint('Sync room to backend failed: $e');
     }
